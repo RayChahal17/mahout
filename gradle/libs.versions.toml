@@ -12,6 +12,9 @@ constraintlayout = "2.2.1"
 navigation = "2.7.7"
 hilt = "2.51.1"
 androidxHilt = "1.2.0"
+room = "2.6.1"
+coroutines = "1.8.1"
+lifecycle = "2.8.7"
 
 
 [libraries]
@@ -31,6 +34,17 @@ hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.r
 
 androidx-hilt-navigation-fragment = { group = "androidx.hilt", name = "hilt-navigation-fragment", version.ref = "androidxHilt" }
 androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "androidxHilt" }
+# --- Room (local database) ---
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+
+# --- Coroutines ---
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+
+# --- Lifecycle (ViewModel + lifecycle scopes) ---
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 
 
 [plugins]
