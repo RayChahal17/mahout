@@ -1,3 +1,5 @@
+# Android Studio / IntelliJ
+.idea/
 *.iml
 .gradle
 /local.properties
