@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/aimFragment">
+
+    <fragment
+        android:id="@+id/aimFragment"
+        android:name="com.mahout.app.ui.aim.AimFragment"
+        android:label="@string/tab_aim" />
+
+    <fragment
+        android:id="@+id/pathFragment"
+        android:name="com.mahout.app.ui.path.PathFragment"
+        android:label="@string/tab_path" />
+
+    <fragment
+        android:id="@+id/elephantFragment"
+        android:name="com.mahout.app.ui.elephant.ElephantFragment"
+        android:label="@string/tab_elephant" />
+
+    <fragment
+        android:id="@+id/northStarFragment"
+        android:name="com.mahout.app.ui.northstar.NorthStarFragment"
+        android:label="@string/tab_north_star" />
+
+    <fragment
+        android:id="@+id/mahoutFragment"
+        android:name="com.mahout.app.ui.mahout.MahoutFragment"
+        android:label="@string/tab_mahout" />
+
+    <!-- Not a bottom tab; opened from toolbar menu -->
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.mahout.app.ui.settings.SettingsFragment"
+        android:label="@string/action_settings" />
+
+</navigation>

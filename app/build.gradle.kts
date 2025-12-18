@@ -1,7 +1,10 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("org.jetbrains.kotlin.kapt")
+    alias(libs.plugins.hilt.android)
 }
+
 
 android {
     namespace = "com.mahout.app"
@@ -26,6 +29,13 @@ android {
             )
         }
     }
+
+    // ✅ ViewBinding generates binding classes for XML layouts:
+    // ActivityMainBinding, FragmentAimBinding, etc.
+    buildFeatures {
+        viewBinding = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -36,13 +46,31 @@ android {
 }
 
 dependencies {
-
+    // Base AndroidX + UI (already in your template)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+
+    // ✅ Navigation Component (FragmentContainerView + NavController)
+    implementation(libs.androidx.navigation.fragment.ktx)
+    implementation(libs.androidx.navigation.ui.ktx)
+
+    // ✅ Hilt DI
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
+
+    // Hilt helpers for Fragment navigation integration (safe to include early)
+    implementation(libs.androidx.hilt.navigation.fragment)
+    kapt(libs.androidx.hilt.compiler)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+
+kapt {
+    // Helps avoid some generated type resolution issues
+    correctErrorTypes = true
 }

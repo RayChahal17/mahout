@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Mahout</string>
+
+    <string name="tab_aim">Aim</string>
+    <string name="tab_path">Path</string>
+    <string name="tab_elephant">Elephant</string>
+    <string name="tab_north_star">North Star</string>
+    <string name="tab_mahout">Mahout</string>
+
+    <string name="action_settings">Settings</string>
 </resources>

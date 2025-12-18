@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- IMPORTANT:
+         These item IDs MUST match fragment IDs in nav_graph.xml.
+         That’s how NavigationUI knows what to navigate to. -->
+
+    <item
+        android:id="@+id/aimFragment"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:title="@string/tab_aim" />
+
+    <item
+        android:id="@+id/pathFragment"
+        android:icon="@android:drawable/ic_menu_recent_history"
+        android:title="@string/tab_path" />
+
+    <item
+        android:id="@+id/elephantFragment"
+        android:icon="@android:drawable/ic_menu_info_details"
+        android:title="@string/tab_elephant" />
+
+    <item
+        android:id="@+id/northStarFragment"
+        android:icon="@android:drawable/ic_menu_compass"
+        android:title="@string/tab_north_star" />
+
+    <item
+        android:id="@+id/mahoutFragment"
+        android:icon="@android:drawable/ic_menu_edit"
+        android:title="@string/tab_mahout" />
+
+</menu>
