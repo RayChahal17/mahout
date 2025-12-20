@@ -1,0 +1,30 @@
+package com.mahout.app.di
+
+import com.mahout.app.data.repository.aim.RoomActionGoalLinkRepository
+import com.mahout.app.data.repository.path.RoomActionRepository
+import com.mahout.app.data.repository.path.RoomSessionRepository
+import com.mahout.app.domain.aim.repository.ActionGoalLinkRepository
+import com.mahout.app.domain.path.repository.ActionRepository
+import com.mahout.app.domain.path.repository.SessionRepository
+import dagger.Binds
+import dagger.Module
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class RepositoryModule {
+
+    @Binds
+    @Singleton
+    abstract fun bindActionRepository(impl: RoomActionRepository): ActionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSessionRepository(impl: RoomSessionRepository): SessionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindActionGoalLinkRepository(impl: RoomActionGoalLinkRepository): ActionGoalLinkRepository
+}

@@ -13,6 +13,10 @@ interface GoalDao {
     @Query("SELECT * FROM goals WHERE deletedAt IS NULL ORDER BY priority DESC, updatedAt DESC")
     fun observeGoals(): Flow<List<GoalEntity>>
 
+    // ✅ NEW: observe a single goal (needed for Goal-for-Action flow)
+    @Query("SELECT * FROM goals WHERE goalId = :goalId LIMIT 1")
+    fun observeGoal(goalId: String): Flow<GoalEntity?>
+
     @Query("SELECT * FROM goals WHERE goalId = :goalId LIMIT 1")
     suspend fun getGoal(goalId: String): GoalEntity?
 
