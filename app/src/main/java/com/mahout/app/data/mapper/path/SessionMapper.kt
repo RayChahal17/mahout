@@ -3,9 +3,12 @@ package com.mahout.app.data.mapper.path
 import com.mahout.app.data.local.path.entity.SessionEntity
 import com.mahout.app.domain.path.model.Session
 
+/**
+ * Converts Room entity <-> domain model.
+ */
 fun SessionEntity.toDomain(): Session {
     return Session(
-        sessionId = sessionId,
+        id = sessionId,
         actionId = actionId,
         startAt = startAt,
         endAt = endAt,
@@ -19,7 +22,7 @@ fun SessionEntity.toDomain(): Session {
 
 fun Session.toEntity(): SessionEntity {
     return SessionEntity(
-        sessionId = sessionId,
+        sessionId = id,
         actionId = actionId,
         startAt = startAt,
         endAt = endAt,

@@ -19,16 +19,17 @@ import com.mahout.app.data.local.northstar.dao.FutureProfileDao
 import com.mahout.app.data.local.northstar.dao.MemorySummaryDao
 import com.mahout.app.data.local.northstar.entity.FutureProfileEntity
 import com.mahout.app.data.local.northstar.entity.MemorySummaryEntity
-import com.mahout.app.data.local.path.dao.CheckEventDao
 import com.mahout.app.data.local.path.dao.SessionDao
-import com.mahout.app.data.local.path.entity.CheckEventEntity
 import com.mahout.app.data.local.path.entity.SessionEntity
 
 /**
  * Single Room database for V1 (local-first).
  *
- * exportSchema=true will write schema JSON to app/schemas when Gradle runs.
- * (You already created app/schemas/.gitkeep.)
+ * V1 scope lock:
+ * - TIME-based tracking only (Sessions)
+ * - No checklist/check-off tables in V1
+ *
+ * exportSchema=true writes schema JSON to app/schemas when Gradle runs.
  */
 @Database(
     entities = [
@@ -38,9 +39,8 @@ import com.mahout.app.data.local.path.entity.SessionEntity
         ActionEntity::class,
         ActionGoalLinkEntity::class,
 
-        // Path
+        // Path (TIME-only)
         SessionEntity::class,
-        CheckEventEntity::class,
 
         // Elephant
         MoodLogEntity::class,
@@ -52,7 +52,7 @@ import com.mahout.app.data.local.path.entity.SessionEntity
         MemorySummaryEntity::class,
         FutureProfileEntity::class
     ],
-    version = 1,
+    version = 2, // bumped because we removed check_events table from the schema
     exportSchema = true
 )
 @TypeConverters(MahoutTypeConverters::class)
@@ -64,9 +64,8 @@ abstract class MahoutDatabase : RoomDatabase() {
     abstract fun actionDao(): ActionDao
     abstract fun actionGoalLinkDao(): ActionGoalLinkDao
 
-    // Path
+    // Path (TIME-only)
     abstract fun sessionDao(): SessionDao
-    abstract fun checkEventDao(): CheckEventDao
 
     // Elephant
     abstract fun moodLogDao(): MoodLogDao

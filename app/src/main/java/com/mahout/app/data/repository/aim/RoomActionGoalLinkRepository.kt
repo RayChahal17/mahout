@@ -34,10 +34,9 @@ class RoomActionGoalLinkRepository @Inject constructor(
                 } else {
                     goalDao.observeGoal(link.goalId)
                         .map { goalEntity ->
-                            // We map inline to avoid needing a separate mapper file right now.
                             goalEntity?.let {
                                 Goal(
-                                    goalId = it.goalId,
+                                    id = it.goalId,               // ✅ FIX: domain uses `id`
                                     title = it.title,
                                     why = it.why,
                                     horizon = it.horizon,

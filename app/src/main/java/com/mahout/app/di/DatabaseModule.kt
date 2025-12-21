@@ -14,14 +14,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
-    /**
-     * Single DB instance for the whole app process.
-     *
-     * Red-team note:
-     * - During early development, migrations change often.
-     * - We can keep destructive migrations ON for now to avoid being blocked.
-     * - Before shipping, we will remove this and add proper migrations.
-     */
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): MahoutDatabase {
@@ -30,23 +22,22 @@ object DatabaseModule {
             MahoutDatabase::class.java,
             "mahout.db"
         )
+            // dev-only convenience; before shipping we’ll do real migrations
             .fallbackToDestructiveMigration()
             .build()
     }
 
     // Provide DAOs (so repositories can inject them)
-
     @Provides fun provideChiefAimDao(db: MahoutDatabase) = db.chiefAimDao()
     @Provides fun provideGoalDao(db: MahoutDatabase) = db.goalDao()
     @Provides fun provideActionDao(db: MahoutDatabase) = db.actionDao()
     @Provides fun provideActionGoalLinkDao(db: MahoutDatabase) = db.actionGoalLinkDao()
 
+    // Path (TIME-only)
     @Provides fun provideSessionDao(db: MahoutDatabase) = db.sessionDao()
-    @Provides fun provideCheckEventDao(db: MahoutDatabase) = db.checkEventDao()
 
     @Provides fun provideMoodLogDao(db: MahoutDatabase) = db.moodLogDao()
     @Provides fun provideJournalEntryDao(db: MahoutDatabase) = db.journalEntryDao()
-
     @Provides fun provideMemorySummaryDao(db: MahoutDatabase) = db.memorySummaryDao()
     @Provides fun provideFutureProfileDao(db: MahoutDatabase) = db.futureProfileDao()
 }

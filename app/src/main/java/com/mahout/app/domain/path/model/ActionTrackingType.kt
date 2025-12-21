@@ -1,10 +1,11 @@
 package com.mahout.app.domain.path.model
 
 /**
- * TIME actions are tracked via Sessions.
- * CHECK actions are tracked via CheckEvents.
+ * V1 scope lock:
+ * Only TIME tracking ships in V1.
+ *
+ * (Checklist/check-off tracking is explicitly deferred.)
  */
 enum class ActionTrackingType {
-    TIME,
-    CHECK
+    TIME
 }

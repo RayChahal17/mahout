@@ -8,9 +8,10 @@ import com.mahout.app.domain.path.model.ActionTrackingType
 import java.time.Instant
 
 /**
- * Actions are the "bridge object".
- * A single Action can be tracked by TIME (Sessions) or CHECKLIST (CheckEvents).
+ * V1 scope lock:
+ * Actions are TIME-tracked only (Sessions).
  */
+
 @Entity(
     tableName = "actions",
     indices = [
@@ -25,13 +26,14 @@ data class ActionEntity(
     val title: String,
     val description: String?,
 
-    val trackingType: ActionTrackingType, // TIME or CHECKLIST
+    val trackingType: ActionTrackingType, // TIME
     val cadence: ActionCadence,
 
     /**
-     * Optional target.
+     * Optional target (V1):
      * - TIME: minutes target
-     * - CHECKLIST: count target
+     *
+     * (Checklist tracking is deferred.)
      */
     val targetValue: Int?,
 

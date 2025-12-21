@@ -3,8 +3,10 @@ package com.mahout.app.domain.path.model
 import java.time.Instant
 
 /**
- * A time log for a TIME action.
- * Note: endAt == null means "in progress" (critical for timer recovery).
+ * Domain model for a time Session (Path tab).
+ *
+ * Domain naming:
+ * - Uses `id` (not sessionId) to avoid leaking DB naming into the app layer.
  */
 data class Session(
     val id: String,

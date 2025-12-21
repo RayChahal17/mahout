@@ -5,7 +5,9 @@ import java.time.LocalDate
 
 /**
  * Domain model for a Goal (Aim tab).
- * Pure Kotlin: no Room/Firestore/UI dependencies.
+ *
+ * Domain naming convention:
+ * - use `id` (not goalId) so DB naming doesn't leak into domain layer.
  */
 data class Goal(
     val id: String,
@@ -17,5 +19,6 @@ data class Goal(
     val targetDate: LocalDate?,
     val parentGoalId: String?,
     val createdAt: Instant,
-    val updatedAt: Instant
+    val updatedAt: Instant,
+    val deletedAt: Instant? = null
 )

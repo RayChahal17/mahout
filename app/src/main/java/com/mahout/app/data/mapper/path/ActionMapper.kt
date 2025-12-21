@@ -11,7 +11,7 @@ import com.mahout.app.domain.path.model.Action
  */
 fun ActionEntity.toDomain(): Action {
     return Action(
-        actionId = actionId,
+        id = actionId,
         title = title,
         description = description,
         trackingType = trackingType,
@@ -26,7 +26,7 @@ fun ActionEntity.toDomain(): Action {
 
 fun Action.toEntity(): ActionEntity {
     return ActionEntity(
-        actionId = actionId,
+        actionId = id,
         title = title,
         description = description,
         trackingType = trackingType,
