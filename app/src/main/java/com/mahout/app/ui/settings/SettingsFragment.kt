@@ -9,7 +9,6 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import com.mahout.app.BuildConfig
 import com.mahout.app.databinding.FragmentSettingsBinding
-import com.mahout.app.ui.debug.DbSanityActivity
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
@@ -41,9 +40,7 @@ class SettingsFragment : Fragment() {
         binding.btnDbSanity.isVisible = BuildConfig.DEBUG
         binding.tvDebugHint.isVisible = BuildConfig.DEBUG
 
-        binding.btnDbSanity.setOnClickListener {
-            startActivity(Intent(requireContext(), DbSanityActivity::class.java))
-        }
+
     }
 
     override fun onDestroyView() {
