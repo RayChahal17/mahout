@@ -22,12 +22,12 @@ object DatabaseModule {
             MahoutDatabase::class.java,
             "mahout.db"
         )
-            // dev-only convenience; before shipping we’ll do real migrations
+            // OK for dev. Before release, replace with real migrations.
             .fallbackToDestructiveMigration()
             .build()
     }
 
-    // Provide DAOs (so repositories can inject them)
+    // Aim
     @Provides fun provideChiefAimDao(db: MahoutDatabase) = db.chiefAimDao()
     @Provides fun provideGoalDao(db: MahoutDatabase) = db.goalDao()
     @Provides fun provideActionDao(db: MahoutDatabase) = db.actionDao()
@@ -36,8 +36,13 @@ object DatabaseModule {
     // Path (TIME-only)
     @Provides fun provideSessionDao(db: MahoutDatabase) = db.sessionDao()
 
+    // Elephant
     @Provides fun provideMoodLogDao(db: MahoutDatabase) = db.moodLogDao()
+
+    // Mahout
     @Provides fun provideJournalEntryDao(db: MahoutDatabase) = db.journalEntryDao()
+
+    // North Star
     @Provides fun provideMemorySummaryDao(db: MahoutDatabase) = db.memorySummaryDao()
     @Provides fun provideFutureProfileDao(db: MahoutDatabase) = db.futureProfileDao()
 }

@@ -17,19 +17,17 @@ import com.mahout.app.data.local.mahout.dao.JournalEntryDao
 import com.mahout.app.data.local.mahout.entity.JournalEntryEntity
 import com.mahout.app.data.local.northstar.dao.FutureProfileDao
 import com.mahout.app.data.local.northstar.dao.MemorySummaryDao
+import com.mahout.app.data.local.northstar.dao.NorthStarMessageDao
 import com.mahout.app.data.local.northstar.entity.FutureProfileEntity
 import com.mahout.app.data.local.northstar.entity.MemorySummaryEntity
+import com.mahout.app.data.local.northstar.entity.NorthStarMessageEntity
 import com.mahout.app.data.local.path.dao.SessionDao
 import com.mahout.app.data.local.path.entity.SessionEntity
 
 /**
  * Single Room database for V1 (local-first).
  *
- * V1 scope lock:
- * - TIME-based tracking only (Sessions)
- * - No checklist/check-off tables in V1
- *
- * exportSchema=true writes schema JSON to app/schemas when Gradle runs.
+ * exportSchema=true will write schema JSON to app/schemas when Gradle runs.
  */
 @Database(
     entities = [
@@ -39,7 +37,7 @@ import com.mahout.app.data.local.path.entity.SessionEntity
         ActionEntity::class,
         ActionGoalLinkEntity::class,
 
-        // Path (TIME-only)
+        // Path (TIME only)
         SessionEntity::class,
 
         // Elephant
@@ -50,9 +48,10 @@ import com.mahout.app.data.local.path.entity.SessionEntity
 
         // North Star
         MemorySummaryEntity::class,
-        FutureProfileEntity::class
+        FutureProfileEntity::class,
+        NorthStarMessageEntity::class
     ],
-    version = 2, // bumped because we removed check_events table from the schema
+    version = 3, // bumped because we added north_star_messages table
     exportSchema = true
 )
 @TypeConverters(MahoutTypeConverters::class)
@@ -64,7 +63,7 @@ abstract class MahoutDatabase : RoomDatabase() {
     abstract fun actionDao(): ActionDao
     abstract fun actionGoalLinkDao(): ActionGoalLinkDao
 
-    // Path (TIME-only)
+    // Path
     abstract fun sessionDao(): SessionDao
 
     // Elephant
@@ -76,4 +75,5 @@ abstract class MahoutDatabase : RoomDatabase() {
     // North Star
     abstract fun memorySummaryDao(): MemorySummaryDao
     abstract fun futureProfileDao(): FutureProfileDao
+    abstract fun northStarMessageDao(): NorthStarMessageDao
 }

@@ -35,6 +35,7 @@ android {
     // ActivityMainBinding, FragmentAimBinding, etc.
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     compileOptions {
