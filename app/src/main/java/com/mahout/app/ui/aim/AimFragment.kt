@@ -11,6 +11,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.datepicker.MaterialDatePicker
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mahout.app.R
 import com.mahout.app.databinding.DialogEditChiefAimBinding
 import com.mahout.app.databinding.FragmentAimBinding
@@ -23,6 +24,22 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/**
+ * Aim tab Fragment (Day 10)
+ *
+ * Responsibilities:
+ * - Render UI from AimViewModel.uiState
+ * - Show edit dialog for Chief Aim
+ * - Trigger weekly stats refresh when screen becomes visible
+ *
+ * NOTE: This Fragment expects your fragment_aim.xml to have:
+ * - loadingOverlay include with id loadingOverlay
+ * - groups: groupChiefAimEmpty, groupChiefAimContent
+ * - views: tvChiefAimTitle, tvChiefAimDescription, chipTarget, chipHeroSummary
+ * - buttons: btnAddGoal, btnSetChiefAim
+ * - roadmap filter buttons: btnFilter30Days, btnFilter1to6, btnFilter6to24, btnFilter2to10
+ * - metric text views: tvMetricTimeValue, tvMetricSessionsValue, tvMetricActiveDaysValue
+ */
 @AndroidEntryPoint
 class AimFragment : Fragment() {
 
@@ -32,7 +49,7 @@ class AimFragment : Fragment() {
     private val viewModel: AimViewModel by viewModels()
 
     // Used to prefill the edit dialog
-    private var lastChiefAim: ChiefAimUi? = null
+    private var lastChiefAim: ChiefAimUiModel? = null
 
     private val targetFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())
 
@@ -48,15 +65,15 @@ class AimFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Top-right button
+        // Top-right button (+ Add Goal) exists visually now; behavior comes Day 11.
         binding.btnAddGoal.setOnClickListener { viewModel.onAddGoalClicked() }
 
-        // Chief Aim card tap = edit (matches screenshot “single hero card” interaction)
+        // Tap hero card to edit (matches your screenshot UX)
         binding.cardChiefAim.setOnClickListener {
             showEditChiefAimDialog(existing = lastChiefAim)
         }
 
-        // Empty state CTA inside the card
+        // Empty state CTA
         binding.btnSetChiefAim.setOnClickListener {
             showEditChiefAimDialog(existing = null)
         }
@@ -107,6 +124,9 @@ class AimFragment : Fragment() {
 
                 binding.groupChiefAimEmpty.isVisible = true
                 binding.groupChiefAimContent.isVisible = false
+
+                // Keep hero summary updated even in empty state
+                binding.chipHeroSummary.text = state.stats.heroSummary
             }
 
             is AimUiState.Content -> {
@@ -122,9 +142,11 @@ class AimFragment : Fragment() {
                 binding.tvChiefAimDescription.isVisible = !desc.isNullOrBlank()
                 binding.tvChiefAimDescription.text = desc.orEmpty()
 
-                val target = state.chiefAim.targetLabel
-                binding.chipTarget.isVisible = !target.isNullOrBlank()
-                binding.chipTarget.text = target.orEmpty()
+                val targetText = state.chiefAim.targetDate?.let { date ->
+                    "Target · ${date.format(targetFormatter)}"
+                }
+                binding.chipTarget.isVisible = !targetText.isNullOrBlank()
+                binding.chipTarget.text = targetText.orEmpty()
 
                 binding.chipHeroSummary.text = state.stats.heroSummary
             }
@@ -132,32 +154,19 @@ class AimFragment : Fragment() {
     }
 
     private fun bindStats(stats: WeeklyStatsUi) {
-        // Metric tiles
         binding.tvMetricTimeValue.text = stats.goalTimeLabel
         binding.tvMetricSessionsValue.text = stats.sessionsLabel
         binding.tvMetricActiveDaysValue.text = stats.activeDaysLabel
-
-        // Empty state hero summary still shows (looks nice + consistent)
-        binding.chipHeroSummary.text = stats.heroSummary
     }
 
-    private fun showEditChiefAimDialog(existing: ChiefAimUi?) {
+    private fun showEditChiefAimDialog(existing: ChiefAimUiModel?) {
         val dialogBinding = DialogEditChiefAimBinding.inflate(layoutInflater)
 
         dialogBinding.etTitle.setText(existing?.title.orEmpty())
         dialogBinding.etDescription.setText(existing?.description.orEmpty())
 
         // We store a LocalDate in-memory while the dialog is open.
-        var selectedTargetDate: LocalDate? = existing?.targetLabel
-            ?.substringAfter("Target · ", missingDelimiterValue = "")
-            ?.takeIf { it.isNotBlank() }
-            ?.let {
-                // If parsing fails (locale differences), we just treat it as null.
-                runCatching { LocalDate.parse(it) }.getOrNull()
-            }
-
-        // Better: keep a separate “raw” date in the UI state later (Day 11 refactor).
-        // For Day 10: simplest is “tap to pick”.
+        var selectedTargetDate: LocalDate? = existing?.targetDate
 
         fun renderTargetField() {
             dialogBinding.etTarget.setText(
@@ -173,7 +182,7 @@ class AimFragment : Fragment() {
                 .build()
 
             picker.addOnPositiveButtonClickListener { epochMillis ->
-                // MaterialDatePicker selection is at midnight UTC.
+                // MaterialDatePicker returns UTC midnight millis. Convert using UTC to preserve the chosen calendar date.
                 selectedTargetDate = Instant.ofEpochMilli(epochMillis)
                     .atZone(ZoneOffset.UTC)
                     .toLocalDate()
@@ -184,7 +193,7 @@ class AimFragment : Fragment() {
             picker.show(childFragmentManager, "chief_aim_target_picker")
         }
 
-        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+        val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(if (existing == null) R.string.aim_dialog_title_set else R.string.aim_dialog_title_edit)
             .setView(dialogBinding.root)
             .setPositiveButton(R.string.common_save, null) // override for validation
