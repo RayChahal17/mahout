@@ -8,4 +8,14 @@
     <string name="tab_mahout">Mahout</string>
 
     <string name="action_settings">Settings</string>
+    <string name="common_loading">Loading…</string>
+
+    <string name="path_empty_title">No actions yet</string>
+    <string name="path_empty_message">Create your first time-based action to start tracking.</string>
+    <string name="common_coming_soon">Coming soon</string>
+
+    <string name="common_ok">OK</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_delete">Delete</string>
+
 </resources>
