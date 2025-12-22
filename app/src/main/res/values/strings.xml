@@ -20,5 +20,44 @@
 
     <string name="beta_warning_title">Beta warning</string>
     <string name="beta_warning_body">Data may be lost. Backup/restore is not available yet.</string>
+    <string name="common_save">Save</string>
+    <string name="common_edit">Edit</string>
+
+    <string name="aim_chief_aim_label">Chief Aim</string>
+    <string name="aim_empty_title">No Chief Aim yet</string>
+    <string name="aim_empty_message">Name what Future You is building. You can change this anytime.</string>
+    <string name="aim_empty_cta">Set Chief Aim</string>
+
+    <string name="aim_dialog_title_set">Set Chief Aim</string>
+    <string name="aim_dialog_title_edit">Edit Chief Aim</string>
+
+    <string name="aim_field_title">Title</string>
+    <string name="aim_field_description_optional">Description (optional)</string>
+    <string name="aim_error_title_required">Title is required</string>
+
+
+    <string name="aim_add_goal">+ Add Goal</string>
+
+
+    <string name="aim_field_target_date_optional">Target date (optional)</string>
+    <string name="aim_pick_target_date">Pick target date</string>
+
+    <string name="aim_target_placeholder">Target · —</string>
+
+    <!-- Metrics (time-only V1) -->
+    <string name="aim_week_summary_placeholder">This week · 0m · 0 sessions · Active 0/7 days</string>
+    <string name="aim_metric_goal_time_7d">Goal time (7d)</string>
+    <string name="aim_metric_sessions_7d">Sessions (7d)</string>
+    <string name="aim_metric_active_days">Active days</string>
+
+    <string name="aim_roadmap_title">Your roadmap</string>
+    <string name="aim_roadmap_subtitle">“Goals become real when linked to your Path actions.”</string>
+
+    <string name="aim_filter_30_days">Next 30 days</string>
+    <string name="aim_filter_1_6_months">1-6 months</string>
+    <string name="aim_filter_6_24_months">6-24 months</string>
+    <string name="aim_filter_2_10_years">2-10 years</string>
+
+    <string name="aim_goal_preview_placeholder">Goal previews are coming in Day 11 (Goals CRUD).</string>
 
 </resources>

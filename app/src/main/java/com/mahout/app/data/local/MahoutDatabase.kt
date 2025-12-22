@@ -3,6 +3,8 @@ package com.mahout.app.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.mahout.app.data.local.aim.dao.ActionDao
 import com.mahout.app.data.local.aim.dao.ActionGoalLinkDao
 import com.mahout.app.data.local.aim.dao.ChiefAimDao
@@ -51,7 +53,7 @@ import com.mahout.app.data.local.path.entity.SessionEntity
         FutureProfileEntity::class,
         NorthStarMessageEntity::class
     ],
-    version = 3, // bumped because we added north_star_messages table
+    version = 4, // ✅ bumped: added ChiefAim.targetDate
     exportSchema = true
 )
 @TypeConverters(MahoutTypeConverters::class)
@@ -76,4 +78,20 @@ abstract class MahoutDatabase : RoomDatabase() {
     abstract fun memorySummaryDao(): MemorySummaryDao
     abstract fun futureProfileDao(): FutureProfileDao
     abstract fun northStarMessageDao(): NorthStarMessageDao
+
+    companion object {
+        /**
+         * Migration 3 → 4:
+         * Add nullable targetDate column to chief_aim table.
+         *
+         * Why nullable?
+         * - Existing users may already have a Chief Aim saved.
+         * - We don’t want to wipe their DB during dev.
+         */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE chief_aim ADD COLUMN targetDate TEXT")
+            }
+        }
+    }
 }

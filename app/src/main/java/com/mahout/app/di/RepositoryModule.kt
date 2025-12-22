@@ -11,6 +11,9 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import com.mahout.app.data.repository.aim.RoomChiefAimRepository
+import com.mahout.app.domain.aim.repository.ChiefAimRepository
+
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -27,4 +30,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindActionGoalLinkRepository(impl: RoomActionGoalLinkRepository): ActionGoalLinkRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindChiefAimRepository(impl: RoomChiefAimRepository): ChiefAimRepository
+
+
 }

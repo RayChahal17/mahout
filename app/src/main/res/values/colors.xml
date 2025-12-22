@@ -2,4 +2,7 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="aim_header_start">#2E5C66</color>
+    <color name="aim_header_end">#8FB0B6</color>
+
 </resources>

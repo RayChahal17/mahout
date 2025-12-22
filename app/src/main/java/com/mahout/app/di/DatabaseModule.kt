@@ -23,7 +23,10 @@ object DatabaseModule {
             "mahout.db"
         )
             // OK for dev. Before release, replace with real migrations.
+            .addMigrations(MahoutDatabase.MIGRATION_3_4)
+            // OK for dev. Before release, replace with real migrations.
             .fallbackToDestructiveMigration()
+
             .build()
     }
 
