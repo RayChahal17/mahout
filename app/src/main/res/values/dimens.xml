@@ -11,7 +11,13 @@
     <dimen name="spacing_32">32dp</dimen>
     <dimen name="spacing_40">40dp</dimen>
     <dimen name="spacing_48">48dp</dimen>
-
     <!-- Common sizes -->
+    <dimen name="icon_48">48dp</dimen>
+    <dimen name="max_content_width">520dp</dimen>
     <dimen name="empty_state_icon_size">72dp</dimen>
+    <dimen name="screen_padding">16dp</dimen>
+
+    <!-- Rounded corners (optional, but handy) -->
+    <dimen name="radius_12">12dp</dimen>
+    <dimen name="radius_16">16dp</dimen>
 </resources>

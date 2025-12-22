@@ -18,4 +18,7 @@
     <string name="common_cancel">Cancel</string>
     <string name="common_delete">Delete</string>
 
+    <string name="beta_warning_title">Beta warning</string>
+    <string name="beta_warning_body">Data may be lost. Backup/restore is not available yet.</string>
+
 </resources>
