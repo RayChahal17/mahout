@@ -9,49 +9,102 @@ import com.mahout.app.domain.aim.model.GoalStatus
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
+/**
+ * Room DAO for the "goals" table.
+ *
+ * Key points:
+ * - Your primary key column is "goalId" (NOT "id").
+ * - We use deletedAt as a soft-delete flag. Anything deletedAt != null is treated as "gone".
+ * - We provide BOTH:
+ *   1) observeGoals() -> list including archived
+ *   2) observeActiveGoals() -> list excluding archived
+ *   3) observeGoal(goalId) -> Flow for a single goal (needed by Action↔Goal link feature)
+ */
 @Dao
 interface GoalDao {
 
     /**
-     * All non-deleted goals (includes ARCHIVED).
-     * Useful for admin/debug or future screens.
+     * Observe ALL non-deleted goals (includes archived).
+     * Used by Aim bucket filtering (including Archived bucket).
      */
-    @Query("SELECT * FROM goals WHERE deletedAt IS NULL ORDER BY priority DESC, updatedAt DESC")
+    @Query(
+        """
+        SELECT * FROM goals
+        WHERE deletedAt IS NULL
+        ORDER BY priority ASC
+        """
+    )
     fun observeGoals(): Flow<List<GoalEntity>>
 
     /**
-     * Day 11: active goals list for Aim tab.
-     * - Excludes soft-deleted goals
-     * - Excludes ARCHIVED goals (they should not appear in the active roadmap list)
-     *
-     * Note: GoalStatus is stored as TEXT via TypeConverters using enum.name,
-     * so comparing against 'ARCHIVED' works.
+     * Observe only non-archived goals.
+     * Useful for earlier Day 11 "active goals" list flows.
      */
-    @Query("SELECT * FROM goals WHERE deletedAt IS NULL AND status != 'ARCHIVED' ORDER BY priority DESC, updatedAt DESC")
-    fun observeActiveGoals(): Flow<List<GoalEntity>>
+    @Query(
+        """
+        SELECT * FROM goals
+        WHERE deletedAt IS NULL
+          AND status != :archivedStatus
+        ORDER BY priority ASC
+        """
+    )
+    fun observeActiveGoals(
+        archivedStatus: GoalStatus = GoalStatus.ARCHIVED
+    ): Flow<List<GoalEntity>>
 
     /**
-     * Observe a single goal (already useful for future linking screens).
+     * Observe a SINGLE goal by id as a Flow.
+     *
+     * Why do we need this?
+     * RoomActionGoalLinkRepository observes an ActionGoalLink (Flow),
+     * then "switches" to the linked Goal (Flow) using flatMapLatest.
+     *
+     * If a goal is soft-deleted, we return null so UI can treat it as unlinked/missing.
      */
-    @Query("SELECT * FROM goals WHERE goalId = :goalId LIMIT 1")
+    @Query(
+        """
+        SELECT * FROM goals
+        WHERE goalId = :goalId
+          AND deletedAt IS NULL
+        LIMIT 1
+        """
+    )
     fun observeGoal(goalId: String): Flow<GoalEntity?>
 
-    @Query("SELECT * FROM goals WHERE goalId = :goalId LIMIT 1")
-    suspend fun getGoal(goalId: String): GoalEntity?
+    /**
+     * One-shot fetch of a goal (nullable).
+     * We also filter soft-deleted rows here to keep behavior consistent.
+     */
+    @Query(
+        """
+        SELECT * FROM goals
+        WHERE goalId = :goalId
+          AND deletedAt IS NULL
+        LIMIT 1
+        """
+    )
+    suspend fun getById(goalId: String): GoalEntity?
 
+    /**
+     * Upsert using REPLACE so primary key overwrites.
+     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(goal: GoalEntity)
+    suspend fun upsert(entity: GoalEntity)
 
     /**
-     * Update status (ACTIVE/ACHIEVED/ARCHIVED) without deleting the record.
-     * We also touch updatedAt to keep ordering consistent.
+     * Update status (used for archiving).
      */
-    @Query("UPDATE goals SET status = :status, updatedAt = :updatedAt WHERE goalId = :goalId")
-    suspend fun updateStatus(goalId: String, status: GoalStatus, updatedAt: Instant)
-
-    /**
-     * Soft delete to preserve receipts/history. UI can hide deleted goals.
-     */
-    @Query("UPDATE goals SET deletedAt = :deletedAt, updatedAt = :deletedAt WHERE goalId = :goalId")
-    suspend fun softDelete(goalId: String, deletedAt: Instant)
+    @Query(
+        """
+        UPDATE goals
+        SET status = :newStatus,
+            updatedAt = :updatedAt
+        WHERE goalId = :goalId
+        """
+    )
+    suspend fun updateStatus(
+        goalId: String,
+        newStatus: GoalStatus,
+        updatedAt: Instant
+    )
 }
