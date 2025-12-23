@@ -17,6 +17,10 @@
     <dimen name="empty_state_icon_size">72dp</dimen>
     <dimen name="screen_padding">16dp</dimen>
 
+
+        <dimen name="spacing_6">6dp</dimen>
+        <dimen name="spacing_10">10dp</dimen>
+
     <!-- Rounded corners (optional, but handy) -->
     <dimen name="radius_12">12dp</dimen>
     <dimen name="radius_16">16dp</dimen>

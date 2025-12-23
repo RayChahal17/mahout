@@ -14,13 +14,13 @@ import com.mahout.app.domain.path.model.Action
  * Sectioned adapter for Path Actions screen.
  *
  * Rows:
- * - HeaderRow (spans full width)
+ * - HeaderRow (spans full width in GridLayoutManager via SpanSizeLookup)
  * - ActionRow (grid card)
  * - MessageRow (spans full width)
  *
- * Day 12 scope:
- * - No session aggregation yet (we display progress based on TimerState only from the Fragment).
- * - Archived section is a placeholder until we observe archived actions.
+ * Day 12/13-safe:
+ * - We do NOT compute session totals here.
+ * - Fragment computes progress + button state and passes them in PathRow.ActionRow.
  */
 class ActionListAdapter(
     private val onActionClick: (Action) -> Unit,
@@ -30,15 +30,17 @@ class ActionListAdapter(
 ) : ListAdapter<PathRow, RecyclerView.ViewHolder>(Diff) {
 
     /**
-     * Controls whether cards show full details (meta/progress) or just title + Start/Stop.
+     * Controls whether cards show full details (meta/progress)
+     * or just title + Start/Stop.
      */
     enum class CardSize { COMPACT, EXPANDED }
 
+    // Default = expanded, like your design (more info visible).
     private var cardSize: CardSize = CardSize.EXPANDED
 
     /**
-     * ✅ This is what your PathFragment is trying to call.
-     * If this function doesn't exist -> "Unresolved reference toggleCardSize".
+     * ✅ Called by PathFragment via: onToggleCardSize = { adapter.toggleCardSize() }
+     * This toggles the adapter's internal state and refreshes rows.
      */
     fun toggleCardSize() {
         cardSize = if (cardSize == CardSize.EXPANDED) CardSize.COMPACT else CardSize.EXPANDED
@@ -63,7 +65,8 @@ class ActionListAdapter(
             }
 
             VIEW_MESSAGE -> {
-                // Reuse same binding for a "message row" (toggle hidden).
+                // Reuse the same header layout for a message row.
+                // We hide the toggle button.
                 val binding = ItemSectionHeaderBinding.inflate(inflater, parent, false)
                 MessageVH(binding)
             }
@@ -96,6 +99,8 @@ class ActionListAdapter(
 
         fun bind(row: PathRow.HeaderRow) {
             binding.tvHeaderTitle.text = row.title
+
+            // Only show the expand/compact icon where desired (usually "Today’s actions")
             binding.btnHeaderToggle.isVisible = row.showSizeToggle
             binding.btnHeaderToggle.setOnClickListener { onToggleCardSize() }
         }
@@ -122,22 +127,26 @@ class ActionListAdapter(
         fun bind(row: PathRow.ActionRow) {
             val action = row.action
 
+            // Basic content
             binding.tvActionTitle.text = action.title
             binding.tvActionMeta.text = row.metaText
 
+            // Progress UI (values already computed in Fragment)
             binding.pbProgress.max = 100
             binding.pbProgress.progress = row.progressPercent
             binding.tvProgressLabel.text = row.progressLabel
 
+            // Timer button UI (values already computed in Fragment)
             binding.btnTimer.text = row.timerButtonText
             binding.btnTimer.isEnabled = row.timerButtonEnabled
 
-            // ✅ Compact mode hides meta + progress, expanded shows everything.
+            // ✅ Density toggle: compact hides meta + progress.
             val compact = (cardSizeProvider() == CardSize.COMPACT)
             binding.tvActionMeta.isVisible = !compact
             binding.pbProgress.isVisible = !compact
             binding.tvProgressLabel.isVisible = !compact
 
+            // Clicks
             binding.root.setOnClickListener { onClick(action) }
             binding.root.setOnLongClickListener {
                 onLongClick(action)

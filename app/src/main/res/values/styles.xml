@@ -1,24 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Consistent text appearances for reuse across screens -->
-    <style name="TextAppearance.Mahout.Title" parent="TextAppearance.Material3.TitleLarge">
-        <item name="android:textStyle">bold</item>
-    </style>
+    <!--
+      IMPORTANT:
+      - Themes live in: res/values/themes/themes.xml (+ night variant)
+      - Text styles live in: res/values/text_appearances.xml
+      - Shape overlays live in: res/values/styles_shape_overlays.xml
 
-    <style name="TextAppearance.Mahout.Body" parent="TextAppearance.Material3.BodyLarge" />
-
-    <style name="TextAppearance.Mahout.Caption" parent="TextAppearance.Material3.BodySmall">
-        <item name="android:alpha">0.78</item>
-    </style>
-
-    <style name="TextAppearance.Mahout.ToolbarTitle" parent="TextAppearance.Material3.TitleMedium">
-        <item name="android:textStyle">bold</item>
-    </style>
-
-    <!-- Optional: single toolbar style (base toolbar approach) -->
-    <style name="Widget.Mahout.Toolbar" parent="Widget.Material3.Toolbar">
-        <item name="titleTextAppearance">@style/TextAppearance.Mahout.ToolbarTitle</item>
-    </style>
+      Keep this file ONLY for extra one-off widget styles (dialogs, chips, etc.)
+      that are NOT duplicated elsewhere.
+    -->
 
 </resources>
