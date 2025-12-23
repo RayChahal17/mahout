@@ -41,8 +41,13 @@ class PathFragment : Fragment() {
 
     private val viewModel: PathViewModel by viewModels()
 
+    // We cache latest data so we can render consistently when either "mode" or "data" changes.
     private var latestActions: List<Action> = emptyList()
     private var latestTimerState: TimerState? = null
+
+    // This is the key UI mode state: Actions tab vs Checklist tab.
+    private var isActionsMode: Boolean = true
+
     private var uiTickerJob: Job? = null
 
     private var pendingStartActionId: String? = null
@@ -80,17 +85,19 @@ class PathFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // ✅ Grid like your mock (2 columns)
+        // Grid like your mock (2 columns)
         binding.rvActions.layoutManager = GridLayoutManager(requireContext(), 2)
         binding.rvActions.adapter = adapter
 
-        // Default toggle selection: Actions
+        // Default selection = Actions
         binding.toggleMode.check(binding.btnModeActions.id)
-        renderMode(isActions = true)
+        isActionsMode = true
+        renderContent()
 
         binding.toggleMode.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
-            renderMode(isActions = checkedId == binding.btnModeActions.id)
+            isActionsMode = (checkedId == binding.btnModeActions.id)
+            renderContent()
         }
 
         binding.btnAddAction.setOnClickListener { showEditActionDialog(existing = null) }
@@ -105,10 +112,22 @@ class PathFragment : Fragment() {
         super.onDestroyView()
     }
 
-    private fun renderMode(isActions: Boolean) {
-        binding.rvActions.isVisible = isActions
-        binding.emptyState.root.isVisible = false
-        binding.tvChecklistPlaceholder.isVisible = !isActions
+    /**
+     * ✅ Single source of truth for visibility.
+     * This prevents the classic bug: RV becomes invisible and never comes back.
+     */
+    private fun renderContent() {
+        val hasActions = latestActions.isNotEmpty()
+
+        // Actions mode: show either RV or empty state.
+        binding.rvActions.isVisible = isActionsMode && hasActions
+        binding.emptyState.root.isVisible = isActionsMode && !hasActions
+
+        // Checklist mode: hide action views, show placeholder.
+        binding.tvChecklistPlaceholder.isVisible = !isActionsMode
+
+        // Timer tray is independent of mode.
+        latestTimerState?.let { renderTimerTray(it) }
     }
 
     private fun collectUi() {
@@ -120,11 +139,8 @@ class PathFragment : Fragment() {
                         latestActions = list
                         adapter.submitList(list)
 
-                        val showEmpty = list.isEmpty() && binding.rvActions.isVisible
-                        binding.emptyState.root.isVisible = showEmpty
-                        binding.rvActions.isVisible = !showEmpty && binding.rvActions.isVisible
-
-                        latestTimerState?.let { renderTimerTray(it) }
+                        // IMPORTANT: Always re-render visibility using latest data.
+                        renderContent()
                     }
                 }
 
@@ -151,7 +167,7 @@ class PathFragment : Fragment() {
     }
 
     /**
-     * TimerState does NOT emit every second, so we run a local ticker while RUNNING.
+     * TimerState doesn't emit every second. We update elapsed locally while RUNNING.
      */
     private fun startUiTicker() {
         if (uiTickerJob?.isActive == true) return
@@ -171,19 +187,16 @@ class PathFragment : Fragment() {
     private fun renderTimerTray(state: TimerState) {
         val tray = binding.timerTray
 
-        val isVisible = state.status == TimerStatus.RUNNING || state.status == TimerStatus.PAUSED
-        tray.root.isVisible = isVisible
-        if (!isVisible) return
+        val show = state.status == TimerStatus.RUNNING || state.status == TimerStatus.PAUSED
+        tray.root.isVisible = show
+        if (!show) return
 
         val actionTitle = state.actionId
             ?.let { id -> latestActions.firstOrNull { it.id == id }?.title }
             ?: "Unknown action"
 
         tray.tvTrayActionTitle.text = actionTitle
-
-        tray.btnTrayStop.setOnClickListener {
-            sendTimerCommand(TimerServiceContract.ACTION_STOP)
-        }
+        tray.btnTrayStop.setOnClickListener { sendTimerCommand(TimerServiceContract.ACTION_STOP) }
 
         updateTrayElapsedOnly(state)
     }
@@ -191,7 +204,6 @@ class PathFragment : Fragment() {
     private fun updateTrayElapsedOnly(state: TimerState) {
         val tray = binding.timerTray
 
-        // Same approximation used in notification for now.
         val runningExtraMillis = if (state.status == TimerStatus.RUNNING) {
             val now = System.currentTimeMillis()
             (now - state.updatedAt.toEpochMilli()).coerceAtLeast(0L)
@@ -220,7 +232,6 @@ class PathFragment : Fragment() {
             TimerStatus.RUNNING,
             TimerStatus.PAUSED -> {
                 if (state?.actionId == action.id) {
-                    // Mock uses Stop (not Pause). We map to service STOP.
                     sendTimerCommand(TimerServiceContract.ACTION_STOP)
                 } else {
                     binding.root.showSnackbar("Stop the current timer first.")
@@ -272,7 +283,7 @@ class PathFragment : Fragment() {
     }
 
     /**
-     * Uses your actual binding ids:
+     * Uses your dialog binding IDs:
      * - actvCadence
      * - actvGoalLink
      */
@@ -335,7 +346,9 @@ class PathFragment : Fragment() {
                             ?.takeIf { it > 0 }
 
                         val selectedGoalTitle = dialogBinding.actvGoalLink.text?.toString()?.trim().orEmpty()
-                        val selectedGoalId = viewModel.activeGoals.value.firstOrNull { it.title == selectedGoalTitle }?.id
+                        val selectedGoalId = viewModel.activeGoals.value
+                            .firstOrNull { it.title == selectedGoalTitle }
+                            ?.id
 
                         viewModel.saveAction(
                             existingId = existing?.id,
