@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardTimer"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_16"
+    android:clickable="false"
+    android:focusable="false"
+    app:cardElevation="0dp"
+    app:cardUseCompatPadding="true"
+    app:strokeWidth="1dp"
+    app:strokeColor="?attr/colorOutline">
+
+    <!--
+      Timer card is "fixed" (not inside a scroll view).
+      The RecyclerView below remains the only scrollable region.
+    -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="@dimen/spacing_16">
+
+        <TextView
+            android:id="@+id/tvTimerStatus"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/path_timer_stopped"
+            android:textAppearance="@style/TextAppearance.Mahout.Body"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <TextView
+            android:id="@+id/tvTimerElapsed"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_8"
+            android:text="00:00"
+            android:textAppearance="@style/TextAppearance.Mahout.Title"
+            app:layout_constraintTop_toBottomOf="@id/tvTimerStatus"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTimerPrimary"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_12"
+            android:text="@string/timer_action_start"
+            app:layout_constraintTop_toBottomOf="@id/tvTimerElapsed"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnTimerSecondary"
+            app:layout_constraintHorizontalWeight="1"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTimerSecondary"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_12"
+            android:text="@string/timer_action_stop"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="@id/btnTimerPrimary"
+            app:layout_constraintStart_toEndOf="@id/btnTimerPrimary"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontalWeight="1"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>
