@@ -103,6 +103,51 @@
     <string name="common_description_optional">Description</string>
     <string name="aim_filter_archived">Archived</string>
 
+    <!-- Path / Actions (Day 12) -->
+
+
+    <string name="action_time_only_note">V1 is time-only (no checklists). Set a target in minutes if you want.</string>
+
+
+
+    <string name="action_title_hint">Action title</string>
+    <string name="action_cadence_hint">Cadence</string>
+    <string name="action_target_minutes_hint">Target minutes (optional)</string>
+    <string name="action_goal_link_hint">Link to a goal (optional)</string>
+
+    <!-- Path -->
+    <string name="path_add_action">Add Action</string>
+
+    <string name="path_archive_action_title">Archive action?</string>
+    <string name="path_archive_action_body">This will hide the action from your active Path list. You can surface archived items later.</string>
+    <string name="path_archive_action_confirm">Archive</string>
+
+    <!-- Action dialog -->
+    <string name="action_dialog_title_add">Add Action</string>
+    <string name="action_dialog_title_edit">Edit Action</string>
+
+    <string name="action_field_title">Title</string>
+    <string name="action_field_cadence">Cadence</string>
+    <string name="action_field_target_minutes">Target minutes (optional)</string>
+    <string name="action_field_goal_link">Link to Goal (optional)</string>
+
+    <!-- Cadence labels -->
+    <string name="action_cadence_daily">Daily</string>
+    <string name="action_cadence_weekly">Weekly</string>
+    <string name="action_cadence_one_time">One-time</string>
+
+    <!-- Goal link -->
+    <string name="action_goal_not_linked">Not linked</string>
+    <string name="action_goal_no_goals_helper">Create a Goal in Aim first, then you can link this action.</string>
+
+    <!-- Validation -->
+    <string name="action_error_title_required">Title is required.</string>
+    <string name="action_error_target_minutes_positive">Target minutes must be greater than 0.</string>
+    <string name="action_error_target_minutes_number">Target minutes must be a number.</string>
+
+    <!-- List meta -->
+    <string name="action_meta_with_target">%1$s • %2$s target</string>
+    <string name="action_target_minutes_helper">How many minutes do you wish to work on this action.</string>
 
 
 </resources>

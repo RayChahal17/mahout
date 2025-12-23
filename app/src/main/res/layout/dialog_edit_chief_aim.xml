@@ -10,7 +10,7 @@
         android:id="@+id/tilTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="@string/aim_field_title"
+        android:hint="@string/common_title"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -20,8 +20,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textCapSentences"
-            android:maxLines="2" />
-
+            android:maxLines="2"/>
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -29,7 +28,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/spacing_12"
-        android:hint="@string/aim_field_description_optional"
+        android:hint="@string/common_description_optional"
         app:layout_constraintTop_toBottomOf="@id/tilTitle"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -48,7 +47,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/spacing_12"
-        android:hint="@string/aim_field_target_date_optional"
+        android:hint="@string/aim_pick_target_date"
         app:endIconMode="custom"
         app:endIconDrawable="@android:drawable/ic_menu_my_calendar"
         app:layout_constraintTop_toBottomOf="@id/tilDescription"
