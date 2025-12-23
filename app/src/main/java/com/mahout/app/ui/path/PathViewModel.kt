@@ -1,4 +1,4 @@
-package com.mahout.app.ui.path.timer
+package com.mahout.app.ui.path
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,9 +15,8 @@ import com.mahout.app.domain.path.model.ActionTrackingType
 import com.mahout.app.domain.path.model.TimerState
 import com.mahout.app.domain.path.usecase.ArchiveActionUseCase
 import com.mahout.app.domain.path.usecase.ObserveActiveActionsUseCase
-import com.mahout.app.domain.path.usecase.ObserveTimerStateUseCase // ✅ IMPORTANT: no ".timer" here
+import com.mahout.app.domain.path.usecase.ObserveTimerStateUseCase // ✅ CORRECT (NO .timer)
 import com.mahout.app.domain.path.usecase.UpsertActionUseCase
-import com.mahout.app.ui.path.PathEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -53,7 +52,8 @@ class PathViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /**
-     * Timer state (STOPPED / RUNNING / PAUSED) observed from Room.
+     * Day 14:
+     * Observe the singleton timer state from Room (STOPPED/RUNNING/PAUSED).
      */
     val timerState: StateFlow<TimerState> =
         observeTimerStateUseCase()
@@ -63,10 +63,6 @@ class PathViewModel @Inject constructor(
                 TimerState.stopped(timeProvider.nowInstant())
             )
 
-    /**
-     * Used by the Action dialog to pre-fill the goal link.
-     * We fetch BEFORE building the dialog UI to avoid wiping link on Save.
-     */
     suspend fun getLinkedGoalId(actionId: String): String? {
         return actionGoalLinkRepository.observeGoalForAction(actionId)
             .first()
@@ -81,10 +77,6 @@ class PathViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Create or update an Action (TIME-only v1).
-     * Also sets/clears 0/1 goal link via SetGoalForActionUseCase.
-     */
     fun saveAction(
         existingId: String?,
         title: String,
@@ -110,7 +102,7 @@ class PathViewModel @Inject constructor(
                 )
 
                 upsertActionUseCase(action)
-                setGoalForActionUseCase(actionId, linkedGoalId)
+                setGoalForActionUseCase(actionId, linkedGoalId) // set or clear 0/1 link
             }
                 .onSuccess { _events.tryEmit(PathEvent.ShowSnackbar("Saved")) }
                 .onFailure { _events.tryEmit(PathEvent.ShowSnackbar(it.message ?: "Save failed")) }
