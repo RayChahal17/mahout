@@ -6,401 +6,387 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Top gradient background like the mock -->
+    <!-- Gradient header background (static, not scrolling) -->
     <View
         android:id="@+id/viewHeaderGradient"
         android:layout_width="0dp"
-        android:layout_height="280dp"
+        android:layout_height="260dp"
         android:background="@drawable/bg_aim_header_gradient"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <androidx.core.widget.NestedScrollView
-        android:id="@+id/scroll"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:fillViewport="true"
+    <!-- Top title -->
+    <TextView
+        android:id="@+id/tvTopTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/screen_padding"
+        android:text="@string/tab_aim"
+        android:textAppearance="@style/TextAppearance.Mahout.Title"
+        android:textColor="@color/white"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <!-- Add Goal button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnAddGoal"
+        style="?attr/materialButtonOutlinedStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/screen_padding"
+        android:text="@string/aim_add_goal"
+        android:textColor="@color/white"
+        app:strokeColor="@color/white"
+        app:icon="@android:drawable/ic_input_add"
+        app:iconTint="@color/white"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Chief Aim hero card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardChiefAim"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginEnd="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/spacing_16"
+        app:cardCornerRadius="@dimen/radius_16"
+        app:cardUseCompatPadding="true"
+        app:layout_constraintTop_toBottomOf="@id/tvTopTitle"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="@dimen/screen_padding">
+            android:padding="@dimen/spacing_16">
 
-            <!-- Top bar -->
             <TextView
-                android:id="@+id/tvTopTitle"
-                android:layout_width="wrap_content"
+                android:id="@+id/tvChiefAimLabel"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="@string/tab_aim"
+                android:gravity="center"
+                android:text="@string/aim_chief_aim_label"
                 android:textAppearance="@style/TextAppearance.Mahout.Title"
-                android:textColor="@color/white"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="parent"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAddGoal"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/aim_add_goal"
-                android:textColor="@color/white"
-                app:strokeColor="@color/white"
-                app:icon="@android:drawable/ic_input_add"
-                app:iconTint="@color/white"
-                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"/>
 
-            <!-- Hero card -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardChiefAim"
-                android:layout_width="0dp"
+            <!-- CONTENT -->
+            <androidx.constraintlayout.widget.Group
+                android:id="@+id/groupChiefAimContent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_16"
-                app:cardCornerRadius="@dimen/radius_16"
-                app:cardUseCompatPadding="true"
-                app:layout_constraintTop_toBottomOf="@id/tvTopTitle"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                android:visibility="gone"
+                app:constraint_referenced_ids="tvChiefAimTitle,tvChiefAimDescription,chipTarget,chipHeroSummary"/>
 
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="@dimen/spacing_16">
-
-                    <TextView
-                        android:id="@+id/tvChiefAimLabel"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:text="@string/aim_chief_aim_label"
-                        android:textAppearance="@style/TextAppearance.Mahout.Title"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"/>
-
-                    <!-- CONTENT STATE -->
-                    <androidx.constraintlayout.widget.Group
-                        android:id="@+id/groupChiefAimContent"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:visibility="gone"
-                        app:constraint_referenced_ids="tvChiefAimTitle,tvChiefAimDescription,chipTarget,chipHeroSummary"/>
-
-                    <TextView
-                        android:id="@+id/tvChiefAimTitle"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_12"
-                        android:gravity="center"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
-                        tools:text="Become a successful businessman"
-                        app:layout_constraintTop_toBottomOf="@id/tvChiefAimLabel"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"/>
-
-                    <TextView
-                        android:id="@+id/tvChiefAimDescription"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_8"
-                        android:gravity="center"
-                        android:textAppearance="?attr/textAppearanceBodyMedium"
-                        android:visibility="gone"
-                        tools:text="Short description (optional)"
-                        app:layout_constraintTop_toBottomOf="@id/tvChiefAimTitle"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"/>
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipTarget"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_12"
-                        android:text="@string/aim_target_placeholder"
-                        android:visibility="gone"
-                        app:layout_constraintTop_toBottomOf="@id/tvChiefAimDescription"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"/>
-
-                    <!-- This replaces “checks” with “sessions” per V1 scope lock -->
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipHeroSummary"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_12"
-                        android:text="@string/aim_week_summary_placeholder"
-                        app:layout_constraintTop_toBottomOf="@id/chipTarget"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"/>
-
-                    <!-- EMPTY STATE -->
-                    <androidx.constraintlayout.widget.Group
-                        android:id="@+id/groupChiefAimEmpty"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:visibility="gone"
-                        app:constraint_referenced_ids="tvEmptyHeadline,tvEmptyBody,btnSetChiefAim,chipHeroSummary"/>
-
-                    <TextView
-                        android:id="@+id/tvEmptyHeadline"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_12"
-                        android:gravity="center"
-                        android:text="@string/aim_empty_title"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
-                        app:layout_constraintTop_toBottomOf="@id/tvChiefAimLabel"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"/>
-
-                    <TextView
-                        android:id="@+id/tvEmptyBody"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_8"
-                        android:gravity="center"
-                        android:text="@string/aim_empty_message"
-                        android:textAppearance="?attr/textAppearanceBodyMedium"
-                        app:layout_constraintTop_toBottomOf="@id/tvEmptyHeadline"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"/>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSetChiefAim"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_12"
-                        android:text="@string/aim_empty_cta"
-                        app:layout_constraintTop_toBottomOf="@id/tvEmptyBody"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"/>
-
-                </androidx.constraintlayout.widget.ConstraintLayout>
-
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Metric cards row -->
-            <LinearLayout
-                android:id="@+id/rowMetrics"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_16"
-                android:orientation="horizontal"
-                android:weightSum="3"
-                app:layout_constraintTop_toBottomOf="@id/cardChiefAim"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="@dimen/spacing_8"
-                    android:layout_weight="1"
-                    app:cardCornerRadius="@dimen/radius_12"
-                    app:cardUseCompatPadding="true">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="@dimen/spacing_12">
-
-                        <TextView
-                            android:id="@+id/tvMetricTimeValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
-                            tools:text="2h 40m"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/aim_metric_goal_time_7d"
-                            android:textAppearance="?attr/textAppearanceBodySmall"/>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="@dimen/spacing_8"
-                    android:layout_weight="1"
-                    app:cardCornerRadius="@dimen/radius_12"
-                    app:cardUseCompatPadding="true">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="@dimen/spacing_12">
-
-                        <TextView
-                            android:id="@+id/tvMetricSessionsValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
-                            tools:text="12"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/aim_metric_sessions_7d"
-                            android:textAppearance="?attr/textAppearanceBodySmall"/>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    app:cardCornerRadius="@dimen/radius_12"
-                    app:cardUseCompatPadding="true">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="@dimen/spacing_12">
-
-                        <TextView
-                            android:id="@+id/tvMetricActiveDaysValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
-                            tools:text="4/7"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/aim_metric_active_days"
-                            android:textAppearance="?attr/textAppearanceBodySmall"/>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-            </LinearLayout>
-
-            <!-- Roadmap section (UI shell Day 10) -->
             <TextView
-                android:id="@+id/tvRoadmapTitle"
+                android:id="@+id/tvChiefAimTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_24"
-                android:text="@string/aim_roadmap_title"
-                android:textAppearance="@style/TextAppearance.Mahout.Title"
-                app:layout_constraintTop_toBottomOf="@id/rowMetrics"
+                android:layout_marginTop="@dimen/spacing_12"
+                android:gravity="center"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                tools:text="Become a successful businessman"
+                app:layout_constraintTop_toBottomOf="@id/tvChiefAimLabel"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"/>
 
             <TextView
-                android:id="@+id/tvRoadmapSubtitle"
+                android:id="@+id/tvChiefAimDescription"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_8"
-                android:text="@string/aim_roadmap_subtitle"
-                android:textAppearance="?attr/textAppearanceBodySmall"
-                app:layout_constraintTop_toBottomOf="@id/tvRoadmapTitle"
+                android:gravity="center"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:visibility="gone"
+                tools:text="Short description (optional)"
+                app:layout_constraintTop_toBottomOf="@id/tvChiefAimTitle"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"/>
 
-            <LinearLayout
-                android:id="@+id/rowFilters"
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipTarget"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_12"
+                android:visibility="gone"
+                tools:text="Target · Dec 31, 2035"
+                app:layout_constraintTop_toBottomOf="@id/tvChiefAimDescription"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"/>
+
+            <!-- No checks in V1: this is sessions/time summary -->
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipHeroSummary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_12"
+                tools:text="This week · 2h 40m · 12 sessions"
+                app:layout_constraintTop_toBottomOf="@id/chipTarget"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"/>
+
+            <!-- EMPTY -->
+            <androidx.constraintlayout.widget.Group
+                android:id="@+id/groupChiefAimEmpty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                app:constraint_referenced_ids="tvEmptyHeadline,tvEmptyBody,btnSetChiefAim,chipHeroSummary"/>
+
+            <TextView
+                android:id="@+id/tvEmptyHeadline"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_12"
-                android:orientation="horizontal"
-                app:layout_constraintTop_toBottomOf="@id/tvRoadmapSubtitle"
+                android:gravity="center"
+                android:text="@string/aim_empty_title"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                app:layout_constraintTop_toBottomOf="@id/tvChiefAimLabel"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                app:layout_constraintEnd_toEndOf="parent"/>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnFilter30Days"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/aim_filter_30_days" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnFilter1to6"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/spacing_8"
-                    android:text="@string/aim_filter_1_6_months" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnFilter6to24"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/spacing_8"
-                    android:text="@string/aim_filter_6_24_months" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnFilter2to10"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/spacing_8"
-                    android:text="@string/aim_filter_2_10_years" />
-            </LinearLayout>
-
-            <!-- Placeholder goal cards (static Day 10; Day 11 becomes real list) -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardGoalPreview1"
+            <TextView
+                android:id="@+id/tvEmptyBody"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_16"
-                app:cardCornerRadius="@dimen/radius_16"
-                app:cardUseCompatPadding="true"
-                app:layout_constraintTop_toBottomOf="@id/rowFilters"
+                android:layout_marginTop="@dimen/spacing_8"
+                android:gravity="center"
+                android:text="@string/aim_empty_message"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                app:layout_constraintTop_toBottomOf="@id/tvEmptyHeadline"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                app:layout_constraintEnd_toEndOf="parent"/>
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="@dimen/spacing_16"
-                    android:text="@string/aim_goal_preview_placeholder"
-                    android:textAppearance="?attr/textAppearanceBodyMedium" />
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardGoalPreview2"
-                android:layout_width="0dp"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSetChiefAim"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_12"
-                app:cardCornerRadius="@dimen/radius_16"
-                app:cardUseCompatPadding="true"
-                app:layout_constraintTop_toBottomOf="@id/cardGoalPreview1"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="@dimen/spacing_16"
-                    android:text="@string/aim_goal_preview_placeholder"
-                    android:textAppearance="?attr/textAppearanceBodyMedium" />
-            </com.google.android.material.card.MaterialCardView>
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="@dimen/spacing_32"
-                app:layout_constraintTop_toBottomOf="@id/cardGoalPreview2"
+                android:text="@string/aim_empty_cta"
+                app:layout_constraintTop_toBottomOf="@id/tvEmptyBody"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"/>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
-    </androidx.core.widget.NestedScrollView>
+    </com.google.android.material.card.MaterialCardView>
 
+    <!-- Metric tiles row (static) -->
+    <LinearLayout
+        android:id="@+id/rowMetrics"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginEnd="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/spacing_16"
+        android:orientation="horizontal"
+        android:weightSum="3"
+        app:layout_constraintTop_toBottomOf="@id/cardChiefAim"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Time -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/spacing_8"
+            android:layout_weight="1"
+            app:cardCornerRadius="@dimen/radius_12"
+            app:cardUseCompatPadding="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_12">
+
+                <TextView
+                    android:id="@+id/tvMetricTimeValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    tools:text="2h 40m"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/aim_metric_goal_time_7d"
+                    android:textAppearance="?attr/textAppearanceBodySmall"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Sessions -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/spacing_8"
+            android:layout_weight="1"
+            app:cardCornerRadius="@dimen/radius_12"
+            app:cardUseCompatPadding="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_12">
+
+                <TextView
+                    android:id="@+id/tvMetricSessionsValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    tools:text="12"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/aim_metric_sessions_7d"
+                    android:textAppearance="?attr/textAppearanceBodySmall"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Active days -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            app:cardCornerRadius="@dimen/radius_12"
+            app:cardUseCompatPadding="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_12">
+
+                <TextView
+                    android:id="@+id/tvMetricActiveDaysValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    tools:text="4/7"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/aim_metric_active_days"
+                    android:textAppearance="?attr/textAppearanceBodySmall"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+
+    <!-- Roadmap title (static) -->
+    <TextView
+        android:id="@+id/tvRoadmapTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginEnd="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/spacing_16"
+        android:text="@string/aim_roadmap_title"
+        android:textAppearance="@style/TextAppearance.Mahout.Title"
+        app:layout_constraintTop_toBottomOf="@id/rowMetrics"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Horizontal scroll headings -->
+    <HorizontalScrollView
+        android:id="@+id/hsBuckets"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginEnd="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/spacing_12"
+        android:scrollbars="none"
+        app:layout_constraintTop_toBottomOf="@id/tvRoadmapTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggleRoadmapBuckets"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:singleSelection="true"
+            app:selectionRequired="true"
+            app:checkedButton="@id/btnBucketNext30">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBucketNext30"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/aim_filter_30_days"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBucket1to6"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/aim_filter_1_6_months"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBucket6to24"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/aim_filter_6_24_months"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBucket2to10"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/aim_filter_2_10_years"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBucketArchived"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/aim_filter_archived"/>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+    </HorizontalScrollView>
+
+    <!-- Empty state for selected bucket -->
+    <TextView
+        android:id="@+id/tvGoalsEmpty"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginEnd="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/spacing_12"
+        android:gravity="center"
+        android:text="@string/goals_empty"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/hsBuckets"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- ✅ ONLY vertical scrolling area -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvGoals"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginEnd="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/spacing_12"
+        android:overScrollMode="never"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/hsBuckets"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:listitem="@layout/item_goal"/>
+
+    <!-- Loading overlay -->
     <include
         android:id="@+id/loadingOverlay"
         layout="@layout/include_loading_overlay"
@@ -408,6 +394,6 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

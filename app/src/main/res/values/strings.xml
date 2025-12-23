@@ -59,5 +59,50 @@
     <string name="aim_filter_2_10_years">2-10 years</string>
 
     <string name="aim_goal_preview_placeholder">Goal previews are coming in Day 11 (Goals CRUD).</string>
+    <string name="goals_empty">No goals yet. Tap “+ Add Goal” to create one.</string>
+
+    <string name="goal_dialog_title_add">Add Goal</string>
+    <string name="goal_dialog_title_edit">Edit Goal</string>
+
+    <string name="goal_field_title">Title</string>
+    <string name="goal_field_why_optional">Why (optional)</string>
+    <string name="goal_field_horizon">Horizon</string>
+    <string name="goal_field_target_date_optional">Target date (optional)</string>
+
+    <string name="goal_error_title_required">Title is required</string>
+    <string name="goal_pick_target_date">Pick target date</string>
+
+    <string name="goal_action_archive">Archive</string>
+    <string name="goal_archive_confirm_title">Archive goal?</string>
+    <string name="goal_archive_confirm_body">This will hide it from your active roadmap.</string>
+
+    <string name="goal_horizon_this_month">This month</string>
+    <string name="goal_horizon_nearterm">1–6 months</string>
+    <string name="goal_horizon_midterm">6–24 months</string>
+    <string name="goal_horizon_longterm">2–10 years</string>
+    <string name="aim_bucket_next_30_days">Next 30 days</string>
+    <string name="aim_bucket_1_6_months">1–6 months</string>
+    <string name="aim_bucket_6_24_months">6–24 months</string>
+    <string name="aim_bucket_2_10_years">2–10 years</string>
+    <string name="aim_bucket_archived">Archived</string>
+
+    <string name="goals_empty_bucket_30_days">No goals in the next 30 days yet.</string>
+    <string name="goals_empty_bucket_1_6">No goals in 1–6 months yet.</string>
+    <string name="goals_empty_bucket_6_24">No goals in 6–24 months yet.</string>
+    <string name="goals_empty_bucket_2_10">No goals in 2–10 years yet.</string>
+    <string name="goals_empty_bucket_archived">No archived goals yet.</string>
+
+    <string name="aim_target_date_range_helper">Why: Chief Aim must be 5–20 years out so your roadmap buckets stay meaningful.</string>
+    <string name="aim_error_target_required">Target date is required (5–20 years).</string>
+
+    <string name="goal_horizon_auto_from_target">Horizon is auto-set from target date.</string>
+    <string name="goal_target_requires_chief_aim_target">Set a Chief Aim target date first. Goals can’t extend past your Chief Aim year.</string>
+    <string name="goal_target_max_helper">Max: %1$s (must stay within Chief Aim year)</string>
+    <string name="goal_target_error_max">Goal target can’t be after %1$s</string>
+    <string name="common_title">Title</string>
+    <string name="common_description_optional">Description</string>
+    <string name="aim_filter_archived">Archived</string>
+
+
 
 </resources>
