@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Simple top title (matches your Aim style pattern) -->
+    <!-- Top title -->
     <TextView
         android:id="@+id/tvTopTitle"
         android:layout_width="wrap_content"
@@ -28,7 +28,19 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/tvTopTitle"/>
 
-    <!-- RecyclerView is the ONLY scrollable area -->
+    <!-- ✅ NEW: Fixed timer card (not scrollable) -->
+    <include
+        android:id="@+id/timerCard"
+        layout="@layout/view_path_timer_card"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginEnd="@dimen/screen_padding"
+        app:layout_constraintTop_toBottomOf="@id/tvTopTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- RecyclerView remains the ONLY scrollable area -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvActions"
         android:layout_width="0dp"
@@ -37,12 +49,12 @@
         android:layout_marginStart="@dimen/screen_padding"
         android:layout_marginEnd="@dimen/screen_padding"
         android:overScrollMode="never"
-        app:layout_constraintTop_toBottomOf="@id/tvTopTitle"
+        app:layout_constraintTop_toBottomOf="@id/timerCard"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Empty state include (your project uses view_empty_state) -->
+    <!-- Empty state include -->
     <include
         android:id="@+id/emptyState"
         layout="@layout/view_empty_state"
@@ -51,17 +63,7 @@
         android:layout_height="0dp"
         android:layout_marginStart="@dimen/screen_padding"
         android:layout_marginEnd="@dimen/screen_padding"
-        app:layout_constraintTop_toBottomOf="@id/tvTopTitle"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-
-    <!-- Loading overlay (optional, consistent with other screens) -->
-    <include
-        android:id="@+id/loadingOverlay"
-        layout="@layout/include_loading_overlay"
-        android:visibility="gone"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/timerCard"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>

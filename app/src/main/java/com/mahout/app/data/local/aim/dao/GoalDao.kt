@@ -12,21 +12,12 @@ import java.time.Instant
 /**
  * Room DAO for the "goals" table.
  *
- * Key points:
- * - Your primary key column is "goalId" (NOT "id").
- * - We use deletedAt as a soft-delete flag. Anything deletedAt != null is treated as "gone".
- * - We provide BOTH:
- *   1) observeGoals() -> list including archived
- *   2) observeActiveGoals() -> list excluding archived
- *   3) observeGoal(goalId) -> Flow for a single goal (needed by Action↔Goal link feature)
+ * - Primary key is goalId
+ * - deletedAt is soft-delete flag
  */
 @Dao
 interface GoalDao {
 
-    /**
-     * Observe ALL non-deleted goals (includes archived).
-     * Used by Aim bucket filtering (including Archived bucket).
-     */
     @Query(
         """
         SELECT * FROM goals
@@ -36,10 +27,6 @@ interface GoalDao {
     )
     fun observeGoals(): Flow<List<GoalEntity>>
 
-    /**
-     * Observe only non-archived goals.
-     * Useful for earlier Day 11 "active goals" list flows.
-     */
     @Query(
         """
         SELECT * FROM goals
@@ -52,15 +39,6 @@ interface GoalDao {
         archivedStatus: GoalStatus = GoalStatus.ARCHIVED
     ): Flow<List<GoalEntity>>
 
-    /**
-     * Observe a SINGLE goal by id as a Flow.
-     *
-     * Why do we need this?
-     * RoomActionGoalLinkRepository observes an ActionGoalLink (Flow),
-     * then "switches" to the linked Goal (Flow) using flatMapLatest.
-     *
-     * If a goal is soft-deleted, we return null so UI can treat it as unlinked/missing.
-     */
     @Query(
         """
         SELECT * FROM goals
@@ -71,10 +49,6 @@ interface GoalDao {
     )
     fun observeGoal(goalId: String): Flow<GoalEntity?>
 
-    /**
-     * One-shot fetch of a goal (nullable).
-     * We also filter soft-deleted rows here to keep behavior consistent.
-     */
     @Query(
         """
         SELECT * FROM goals
@@ -85,15 +59,9 @@ interface GoalDao {
     )
     suspend fun getById(goalId: String): GoalEntity?
 
-    /**
-     * Upsert using REPLACE so primary key overwrites.
-     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: GoalEntity)
 
-    /**
-     * Update status (used for archiving).
-     */
     @Query(
         """
         UPDATE goals
@@ -107,4 +75,19 @@ interface GoalDao {
         newStatus: GoalStatus,
         updatedAt: Instant
     )
+
+    /**
+     * Day 11 - Delete behavior:
+     * Soft-delete the goal so it disappears from UI lists,
+     * while keeping the record for safety/history.
+     */
+    @Query(
+        """
+        UPDATE goals
+        SET deletedAt = :deletedAt,
+            updatedAt = :deletedAt
+        WHERE goalId = :goalId
+        """
+    )
+    suspend fun softDelete(goalId: String, deletedAt: Instant)
 }

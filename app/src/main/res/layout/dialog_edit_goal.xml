@@ -1,83 +1,110 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="@dimen/spacing_16">
+    android:layout_height="wrap_content">
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilGoalTitle"
-        android:layout_width="0dp"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/goal_field_title"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        android:orientation="vertical"
+        android:padding="@dimen/spacing_16">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etGoalTitle"
+        <!-- Title (required) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilGoalTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textCapSentences"
-            android:maxLines="2"/>
-    </com.google.android.material.textfield.TextInputLayout>
+            android:hint="@string/goal_field_title">
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilGoalWhy"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_12"
-        android:hint="@string/goal_field_why_optional"
-        app:layout_constraintTop_toBottomOf="@id/tilGoalTitle"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etGoalTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etGoalWhy"
+        <!-- Why (optional) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilGoalWhy"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textCapSentences|textMultiLine"
-            android:minLines="2"
-            android:maxLines="5"/>
-    </com.google.android.material.textfield.TextInputLayout>
+            android:layout_marginTop="@dimen/spacing_12"
+            android:hint="@string/goal_field_why_optional">
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilHorizon"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_12"
-        android:hint="@string/goal_field_horizon"
-        app:layout_constraintTop_toBottomOf="@id/tilGoalWhy"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etGoalWhy"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.textfield.MaterialAutoCompleteTextView
-            android:id="@+id/actvHorizon"
+        <!-- Horizon (auto if target date set) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilHorizon"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="none"/>
-    </com.google.android.material.textfield.TextInputLayout>
+            android:layout_marginTop="@dimen/spacing_12"
+            android:hint="@string/goal_field_horizon">
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilGoalTarget"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_12"
-        android:hint="@string/goal_field_target_date_optional"
-        app:endIconMode="custom"
-        app:endIconDrawable="@android:drawable/ic_menu_my_calendar"
-        app:layout_constraintTop_toBottomOf="@id/tilHorizon"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+            <AutoCompleteTextView
+                android:id="@+id/actvHorizon"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etGoalTarget"
+        <!-- Parent Goal (optional laddering) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilParentGoal"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:focusable="false"
-            android:clickable="true"
-            android:inputType="none"/>
-    </com.google.android.material.textfield.TextInputLayout>
+            android:layout_marginTop="@dimen/spacing_12"
+            android:hint="@string/goal_parent_label"
+            app:helperText="@string/goal_parent_helper">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+            <AutoCompleteTextView
+                android:id="@+id/actvParentGoal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Target date (optional; bounded by Chief Aim year) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilGoalTarget"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_12"
+            android:hint="@string/goal_field_target_optional">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etGoalTarget"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:focusable="false"
+                android:clickable="true"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Edit-only actions (shown only when existing != null) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnViewDetails"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_16"
+            android:text="@string/goal_action_view_details"
+            android:visibility="gone"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDeleteGoal"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_8"
+            android:text="@string/goal_action_delete"
+            android:visibility="gone"/>
+
+    </LinearLayout>
+</ScrollView>

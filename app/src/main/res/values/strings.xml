@@ -149,5 +149,49 @@
     <string name="action_meta_with_target">%1$s • %2$s target</string>
     <string name="action_target_minutes_helper">How many minutes do you wish to work on this action.</string>
 
+    <string name="goal_parent_label">Parent goal (optional)</string>
+    <string name="goal_parent_none">None</string>
+    <string name="goal_parent_helper">Use a parent goal to ladder this goal under a bigger outcome.</string>
+
+    <string name="goal_action_view_details">View details</string>
+    <string name="goal_action_delete">Delete goal</string>
+
+    <string name="goal_delete_confirm_title">Delete this goal?</string>
+    <string name="goal_delete_confirm_body">This will remove the goal from your roadmap and unlink any linked actions. Your past sessions stay intact.</string>
+    <string name="goal_delete_confirm_action">Delete</string>
+
+    <string name="goal_detail_title">Goal</string>
+    <string name="goal_detail_not_found">Goal not found.</string>
+    <string name="goal_detail_receipts_title">Receipts</string>
+    <string name="goal_detail_receipts_body">Receipts (sessions and totals) will appear here in a later day. This placeholder confirms the screen structure.</string>
+    <string name="goal_field_target_optional">Link one of your goals to this action</string>
+    <!-- Path Timer (Day 13+) -->
+    <string name="timer_notification_channel_name">Timer</string>
+    <string name="timer_notification_channel_description">Timer controls for time-based actions.</string>
+
+    <string name="timer_notification_starting_title">Starting timer…</string>
+    <string name="timer_notification_starting_body">Preparing your timer</string>
+
+    <string name="timer_notification_running_title">Timing: %1$s</string>
+    <string name="timer_notification_paused_title">Paused: %1$s</string>
+    <string name="timer_notification_stopped_title">Timer stopped</string>
+    <string name="timer_notification_stopped_body">No timer running</string>
+
+    <string name="timer_notification_elapsed">%1$s elapsed</string>
+    <string name="timer_unknown_action">Unknown action</string>
+
+    <string name="timer_action_pause">Pause</string>
+    <string name="timer_action_resume">Resume</string>
+    <string name="timer_action_stop">Stop</string>
+    <!-- Path Timer UI (Day 14) -->
+    <string name="timer_action_start">Start</string>
+    <string name="path_timer_stopped">No timer running</string>
+    <string name="path_timer_running">Running: %1$s</string>
+    <string name="path_timer_paused">Paused: %1$s</string>
+
+    <string name="path_timer_start_pick_title">Start timer for…</string>
+    <string name="path_timer_no_actions">Create an action first, then start a timer.</string>
+    <string name="path_timer_stop_first">Stop the current timer first.</string>
+    <string name="path_timer_notifications_denied">Notifications are required to show timer controls.</string>
 
 </resources>

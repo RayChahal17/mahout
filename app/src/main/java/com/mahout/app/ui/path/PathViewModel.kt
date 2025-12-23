@@ -10,12 +10,11 @@ import com.mahout.app.domain.aim.usecase.ObserveActiveGoalsUseCase
 import com.mahout.app.domain.aim.usecase.SetGoalForActionUseCase
 import com.mahout.app.domain.path.model.Action
 import com.mahout.app.domain.path.model.ActionCadence
-import com.mahout.app.domain.path.model.ActionStatus
 import com.mahout.app.domain.path.model.ActionTrackingType
 import com.mahout.app.domain.path.model.TimerState
 import com.mahout.app.domain.path.usecase.ArchiveActionUseCase
 import com.mahout.app.domain.path.usecase.ObserveActiveActionsUseCase
-import com.mahout.app.domain.path.usecase.ObserveTimerStateUseCase // ✅ CORRECT (NO .timer)
+import com.mahout.app.domain.path.usecase.ObserveTimerStateUseCase // ✅ NO ".timer"
 import com.mahout.app.domain.path.usecase.UpsertActionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -51,10 +50,6 @@ class PathViewModel @Inject constructor(
         observeActiveGoalsUseCase()
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    /**
-     * Day 14:
-     * Observe the singleton timer state from Room (STOPPED/RUNNING/PAUSED).
-     */
     val timerState: StateFlow<TimerState> =
         observeTimerStateUseCase()
             .stateIn(
@@ -89,20 +84,23 @@ class PathViewModel @Inject constructor(
                 val now = timeProvider.nowInstant()
                 val actionId = existingId ?: idProvider.newId()
 
+                // ✅ Your domain model uses isArchived instead of ActionStatus
                 val action = Action(
                     id = actionId,
                     title = title,
                     description = null,
-                    cadence = cadence,
                     trackingType = ActionTrackingType.TIME,
+                    cadence = cadence,
                     targetValue = targetMinutes,
-                    status = ActionStatus.ACTIVE,
+                    isArchived = false,
                     createdAt = now,
                     updatedAt = now
                 )
 
                 upsertActionUseCase(action)
-                setGoalForActionUseCase(actionId, linkedGoalId) // set or clear 0/1 link
+
+                // 0/1 link to Goal (set or clear)
+                setGoalForActionUseCase(actionId, linkedGoalId)
             }
                 .onSuccess { _events.tryEmit(PathEvent.ShowSnackbar("Saved")) }
                 .onFailure { _events.tryEmit(PathEvent.ShowSnackbar(it.message ?: "Save failed")) }

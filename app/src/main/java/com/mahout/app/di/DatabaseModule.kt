@@ -23,10 +23,12 @@ object DatabaseModule {
             "mahout.db"
         )
             // OK for dev. Before release, replace with real migrations.
-            .addMigrations(MahoutDatabase.MIGRATION_3_4)
+            .addMigrations(
+                MahoutDatabase.MIGRATION_3_4,
+                MahoutDatabase.MIGRATION_4_5
+            )
             // OK for dev. Before release, replace with real migrations.
             .fallbackToDestructiveMigration()
-
             .build()
     }
 
@@ -38,6 +40,7 @@ object DatabaseModule {
 
     // Path (TIME-only)
     @Provides fun provideSessionDao(db: MahoutDatabase) = db.sessionDao()
+    @Provides fun provideTimerStateDao(db: MahoutDatabase) = db.timerStateDao()
 
     // Elephant
     @Provides fun provideMoodLogDao(db: MahoutDatabase) = db.moodLogDao()

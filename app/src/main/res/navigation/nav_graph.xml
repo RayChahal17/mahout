@@ -35,4 +35,14 @@
         android:name="com.mahout.app.ui.settings.SettingsFragment"
         android:label="@string/action_settings" />
 
+    <fragment
+        android:id="@+id/goalDetailFragment"
+        android:name="com.mahout.app.ui.aim.GoalDetailFragment"
+        android:label="@string/goal_detail_title">
+        <argument
+            android:name="goalId"
+            app:argType="string" />
+    </fragment>
+
+
 </navigation>

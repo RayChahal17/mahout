@@ -1,10 +1,15 @@
 package com.mahout.app.ui.path
 
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -13,14 +18,20 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.mahout.app.R
 import com.mahout.app.databinding.DialogEditActionBinding
 import com.mahout.app.databinding.FragmentPathBinding
 import com.mahout.app.domain.path.model.Action
 import com.mahout.app.domain.path.model.ActionCadence
+import com.mahout.app.domain.path.model.TimerState
+import com.mahout.app.domain.path.model.TimerStatus
 import com.mahout.app.ui.common.showSnackbar
+import com.mahout.app.ui.path.timer.TimerForegroundService
+import com.mahout.app.ui.path.timer.TimerServiceContract
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.Duration
 
 @AndroidEntryPoint
 class PathFragment : Fragment() {
@@ -30,13 +41,35 @@ class PathFragment : Fragment() {
 
     private val viewModel: PathViewModel by viewModels()
 
-    // Day 12 interactions:
-    // - Tap row => edit dialog
-    // - Long press => archive confirm
+    private var latestActions: List<Action> = emptyList()
+    private var latestTimerState: TimerState? = null
+    private var uiTickerJob: Job? = null
+
+    private var pendingStartActionId: String? = null
+
+    private val requestPostNotifications =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            val actionId = pendingStartActionId
+            pendingStartActionId = null
+
+            if (granted && actionId != null) {
+                startTimerService(actionId)
+            } else {
+                binding.root.showSnackbar("Notifications are required to show timer controls.")
+            }
+        }
+
     private val adapter = ActionListAdapter(
         onClick = { action -> showEditActionDialog(existing = action) },
-        onLongClick = { action -> confirmArchiveAction(action) }
+        onLongClick = { action -> confirmArchiveAction(action) },
+        onTimerClick = { action -> handleRowTimerClick(action) }
     )
+
+    private object CadenceLabels {
+        const val DAILY = "Daily"
+        const val WEEKLY = "Weekly"
+        const val ONE_TIME = "One-time"
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -53,12 +86,19 @@ class PathFragment : Fragment() {
         binding.rvActions.layoutManager = LinearLayoutManager(requireContext())
         binding.rvActions.adapter = adapter
 
-        // Add Action button
-        binding.btnAddAction.setOnClickListener {
-            showEditActionDialog(existing = null)
-        }
+        binding.btnAddAction.setOnClickListener { showEditActionDialog(existing = null) }
+
+        // Initial render
+        renderTimerCard(TimerState.stopped(viewModel.timerState.value.updatedAt))
 
         collectUi()
+    }
+
+    override fun onDestroyView() {
+        uiTickerJob?.cancel()
+        uiTickerJob = null
+        _binding = null
+        super.onDestroyView()
     }
 
     private fun collectUi() {
@@ -67,9 +107,24 @@ class PathFragment : Fragment() {
 
                 launch {
                     viewModel.actions.collect { list ->
+                        latestActions = list
                         adapter.submitList(list)
+
                         binding.emptyState.root.isVisible = list.isEmpty()
                         binding.rvActions.isVisible = list.isNotEmpty()
+
+                        latestTimerState?.let { renderTimerCard(it) }
+                    }
+                }
+
+                launch {
+                    viewModel.timerState.collect { state ->
+                        latestTimerState = state
+
+                        renderTimerCard(state)
+                        adapter.updateTimerState(state)
+
+                        if (state.status == TimerStatus.RUNNING) startUiTicker() else stopUiTicker()
                     }
                 }
 
@@ -84,193 +139,256 @@ class PathFragment : Fragment() {
         }
     }
 
+    private fun startUiTicker() {
+        if (uiTickerJob?.isActive == true) return
+
+        uiTickerJob = viewLifecycleOwner.lifecycleScope.launch {
+            while (true) {
+                latestTimerState?.let { renderTimerElapsedOnly(it) }
+                delay(1_000L)
+            }
+        }
+    }
+
+    private fun stopUiTicker() {
+        uiTickerJob?.cancel()
+        uiTickerJob = null
+    }
+
+    private fun renderTimerCard(state: TimerState) {
+        val card = binding.timerCard
+
+        val actionTitle = state.actionId
+            ?.let { id -> latestActions.firstOrNull { it.id == id }?.title }
+            ?: "Unknown action"
+
+        when (state.status) {
+            TimerStatus.STOPPED -> {
+                card.tvTimerStatus.text = "No timer running"
+                card.btnTimerPrimary.text = "Start"
+                card.btnTimerSecondary.isVisible = false
+                card.btnTimerPrimary.setOnClickListener { showStartTimerPickerDialog() }
+            }
+
+            TimerStatus.RUNNING -> {
+                card.tvTimerStatus.text = "Running: $actionTitle"
+                card.btnTimerPrimary.text = "Pause"
+                card.btnTimerSecondary.text = "Stop"
+                card.btnTimerSecondary.isVisible = true
+                card.btnTimerPrimary.setOnClickListener { sendTimerCommand(TimerServiceContract.ACTION_PAUSE) }
+                card.btnTimerSecondary.setOnClickListener { sendTimerCommand(TimerServiceContract.ACTION_STOP) }
+            }
+
+            TimerStatus.PAUSED -> {
+                card.tvTimerStatus.text = "Paused: $actionTitle"
+                card.btnTimerPrimary.text = "Resume"
+                card.btnTimerSecondary.text = "Stop"
+                card.btnTimerSecondary.isVisible = true
+                card.btnTimerPrimary.setOnClickListener { sendTimerCommand(TimerServiceContract.ACTION_RESUME) }
+                card.btnTimerSecondary.setOnClickListener { sendTimerCommand(TimerServiceContract.ACTION_STOP) }
+            }
+        }
+
+        renderTimerElapsedOnly(state)
+    }
+
+    private fun renderTimerElapsedOnly(state: TimerState) {
+        val card = binding.timerCard
+
+        val runningExtraMillis = if (state.status == TimerStatus.RUNNING) {
+            val now = System.currentTimeMillis()
+            (now - state.updatedAt.toEpochMilli()).coerceAtLeast(0L)
+        } else 0L
+
+        val totalMillis = (state.accumulatedMillis + runningExtraMillis).coerceAtLeast(0L)
+        val d = Duration.ofMillis(totalMillis)
+
+        val hours = d.toHours()
+        val minutes = (d.toMinutes() % 60)
+        val seconds = (d.seconds % 60)
+
+        val formatted = if (hours > 0) {
+            String.format("%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format("%02d:%02d", minutes, seconds)
+        }
+
+        card.tvTimerElapsed.text = formatted
+    }
+
+    private fun showStartTimerPickerDialog() {
+        if (latestActions.isEmpty()) {
+            binding.root.showSnackbar("Create an action first, then start a timer.")
+            return
+        }
+
+        val titles = latestActions.map { it.title }.toTypedArray()
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Start timer for…")
+            .setItems(titles) { _, which ->
+                val action = latestActions[which]
+                ensureNotificationPermissionThenStart(action.id)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun handleRowTimerClick(action: Action) {
+        val state = latestTimerState
+
+        when (state?.status ?: TimerStatus.STOPPED) {
+            TimerStatus.STOPPED -> ensureNotificationPermissionThenStart(action.id)
+
+            TimerStatus.RUNNING -> {
+                if (state?.actionId == action.id) {
+                    sendTimerCommand(TimerServiceContract.ACTION_PAUSE)
+                } else {
+                    binding.root.showSnackbar("Stop the current timer first.")
+                }
+            }
+
+            TimerStatus.PAUSED -> {
+                if (state?.actionId == action.id) {
+                    sendTimerCommand(TimerServiceContract.ACTION_RESUME)
+                } else {
+                    binding.root.showSnackbar("Stop the current timer first.")
+                }
+            }
+        }
+    }
+
+    private fun ensureNotificationPermissionThenStart(actionId: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            startTimerService(actionId)
+            return
+        }
+
+        val granted = ContextCompat.checkSelfPermission(
+            requireContext(),
+            android.Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (granted) {
+            startTimerService(actionId)
+        } else {
+            pendingStartActionId = actionId
+            requestPostNotifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    private fun startTimerService(actionId: String) {
+        val ctx = requireContext()
+        val intent = Intent(ctx, TimerForegroundService::class.java).apply {
+            action = TimerServiceContract.ACTION_START
+            putExtra(TimerServiceContract.EXTRA_ACTION_ID, actionId)
+        }
+        ContextCompat.startForegroundService(ctx, intent)
+    }
+
+    private fun sendTimerCommand(command: String) {
+        val ctx = requireContext()
+        val intent = Intent(ctx, TimerForegroundService::class.java).apply { action = command }
+        ctx.startService(intent)
+    }
+
     private fun confirmArchiveAction(action: Action) {
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.path_archive_action_title)
-            .setMessage(R.string.path_archive_action_body)
-            .setPositiveButton(R.string.path_archive_action_confirm) { _, _ ->
+            .setTitle("Archive action?")
+            .setMessage("This will hide the action from your active list.")
+            .setPositiveButton("Archive") { _, _ ->
                 viewModel.archiveAction(action.id)
             }
-            .setNegativeButton(R.string.common_cancel, null)
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
     /**
-     * Day 12 dialog:
-     * - Title (required)
-     * - Cadence (dropdown)  ✅ fixed to always open
-     * - Target minutes (optional)
-     * - Optional link to 1 goal (dropdown) ✅ fixed to persist + prefill
+     * Action create/edit dialog.
      *
-     * NOTE: V1 scope lock: time-only, no checklists.
+     * IMPORTANT FIX:
+     * Your layout uses `actvCadence` and `actvGoalLink`, not `actCadence/actGoal`.
      */
     private fun showEditActionDialog(existing: Action?) {
-        // Prefetch the linked goal before building UI so we don’t accidentally clear it on Save.
         viewLifecycleOwner.lifecycleScope.launch {
             val linkedGoalId: String? = existing?.let { viewModel.getLinkedGoalId(it.id) }
             if (!isAdded) return@launch
 
             val dialogBinding = DialogEditActionBinding.inflate(layoutInflater)
 
-            // Prefill
             dialogBinding.etTitle.setText(existing?.title.orEmpty())
             dialogBinding.etTargetMinutes.setText(existing?.targetValue?.toString().orEmpty())
 
-            // -------------------------
-            // Cadence dropdown
-            // -------------------------
-            val cadences = listOf(
-                ActionCadence.DAILY,
-                ActionCadence.WEEKLY,
-                ActionCadence.ONE_TIME
+            // ✅ Correct binding id: actvCadence
+            val cadenceOptions = listOf(
+                CadenceLabels.DAILY,
+                CadenceLabels.WEEKLY,
+                CadenceLabels.ONE_TIME
             )
+            val cadenceAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, cadenceOptions)
+            dialogBinding.actvCadence.setAdapter(cadenceAdapter)
 
-            fun cadenceLabel(c: ActionCadence): String = when (c) {
-                ActionCadence.DAILY -> getString(R.string.action_cadence_daily)
-                ActionCadence.WEEKLY -> getString(R.string.action_cadence_weekly)
-                ActionCadence.ONE_TIME -> getString(R.string.action_cadence_one_time)
+            val initialCadenceLabel = when (existing?.cadence ?: ActionCadence.DAILY) {
+                ActionCadence.DAILY -> CadenceLabels.DAILY
+                ActionCadence.WEEKLY -> CadenceLabels.WEEKLY
+                ActionCadence.ONE_TIME -> CadenceLabels.ONE_TIME
+            }
+            dialogBinding.actvCadence.setText(initialCadenceLabel, false)
+
+            // ✅ Correct binding id: actvGoalLink
+            val goalTitles = viewModel.activeGoals.value.map { it.title }
+            val goalAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, goalTitles)
+            dialogBinding.actvGoalLink.setAdapter(goalAdapter)
+
+            linkedGoalId?.let { id ->
+                val idx = viewModel.activeGoals.value.indexOfFirst { it.id == id }
+                if (idx >= 0) dialogBinding.actvGoalLink.setText(goalTitles[idx], false)
             }
 
-            var selectedCadence: ActionCadence = existing?.cadence ?: ActionCadence.DAILY
-
-            dialogBinding.actvCadence.setAdapter(
-                ArrayAdapter(
-                    requireContext(),
-                    android.R.layout.simple_list_item_1,
-                    cadences.map { cadenceLabel(it) }
-                )
-            )
-            dialogBinding.actvCadence.setText(cadenceLabel(selectedCadence), false)
-
-            // IMPORTANT UX FIX:
-            // Some devices won’t show dropdown unless we explicitly call showDropDown().
-            dialogBinding.actvCadence.setOnClickListener { dialogBinding.actvCadence.showDropDown() }
-            dialogBinding.actvCadence.setOnFocusChangeListener { _, hasFocus ->
-                if (hasFocus) dialogBinding.actvCadence.showDropDown()
-            }
-
-            dialogBinding.actvCadence.setOnItemClickListener { _, _, position, _ ->
-                selectedCadence = cadences[position]
-            }
-
-            // -------------------------
-            // Goal link dropdown (0 or 1)
-            // -------------------------
-            val activeGoals = viewModel.activeGoals.value
-
-            val goalLabels = buildList {
-                add(getString(R.string.action_goal_not_linked)) // position 0
-                addAll(activeGoals.map { it.title })
-            }
-
-            var selectedGoalId: String? = linkedGoalId
-
-            dialogBinding.actvGoalLink.setAdapter(
-                ArrayAdapter(
-                    requireContext(),
-                    android.R.layout.simple_list_item_1,
-                    goalLabels
-                )
-            )
-
-            // Prefill goal selection:
-            val prefillLabel =
-                if (selectedGoalId == null) {
-                    getString(R.string.action_goal_not_linked)
-                } else {
-                    val idx = activeGoals.indexOfFirst { it.id == selectedGoalId }
-                    if (idx == -1) getString(R.string.action_goal_not_linked) else activeGoals[idx].title
-                }
-            dialogBinding.actvGoalLink.setText(prefillLabel, false)
-
-            dialogBinding.tilGoalLink.helperText =
-                if (activeGoals.isEmpty()) getString(R.string.action_goal_no_goals_helper) else null
-
-            // Same dropdown reliability fix as cadence:
-            dialogBinding.actvGoalLink.setOnClickListener { dialogBinding.actvGoalLink.showDropDown() }
-            dialogBinding.actvGoalLink.setOnFocusChangeListener { _, hasFocus ->
-                if (hasFocus) dialogBinding.actvGoalLink.showDropDown()
-            }
-
-            dialogBinding.actvGoalLink.setOnItemClickListener { _, _, position, _ ->
-                selectedGoalId =
-                    if (position == 0) null
-                    else activeGoals[position - 1].id
-            }
-
-            // -------------------------
-            // Build dialog safely (no resource-id-0 crashes)
-            // -------------------------
-            val builder = MaterialAlertDialogBuilder(requireContext())
-                .setTitle(if (existing == null) R.string.action_dialog_title_add else R.string.action_dialog_title_edit)
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(if (existing == null) "Add action" else "Edit action")
                 .setView(dialogBinding.root)
-                .setPositiveButton(R.string.common_save, null)   // override for validation
-                .setNegativeButton(R.string.common_cancel, null) // default dismiss
+                .setPositiveButton("Save", null)
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+                .also { dialog ->
+                    dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        val title = dialogBinding.etTitle.text?.toString()?.trim().orEmpty()
+                        if (title.isBlank()) {
+                            dialogBinding.tilTitle.error = "Title is required"
+                            return@setOnClickListener
+                        } else {
+                            dialogBinding.tilTitle.error = null
+                        }
 
-            if (existing != null) {
-                builder.setNeutralButton(R.string.path_archive_action_confirm, null)
-            }
+                        val cadence = when (dialogBinding.actvCadence.text?.toString()?.trim()) {
+                            CadenceLabels.WEEKLY -> ActionCadence.WEEKLY
+                            CadenceLabels.ONE_TIME -> ActionCadence.ONE_TIME
+                            else -> ActionCadence.DAILY
+                        }
 
-            val dialog = builder.create()
+                        val targetMinutes = dialogBinding.etTargetMinutes.text?.toString()
+                            ?.trim()
+                            ?.takeIf { it.isNotBlank() }
+                            ?.toIntOrNull()
+                            ?.takeIf { it > 0 }
 
-            dialog.setOnShowListener {
-                // SAVE handler with validation
-                dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                    val title = dialogBinding.etTitle.text?.toString().orEmpty().trim()
-                    val targetMinutesRaw = dialogBinding.etTargetMinutes.text?.toString()?.trim()
+                        val selectedGoalTitle = dialogBinding.actvGoalLink.text?.toString()?.trim().orEmpty()
+                        val selectedGoalId = viewModel.activeGoals.value
+                            .firstOrNull { it.title == selectedGoalTitle }
+                            ?.id
 
-                    if (title.isBlank()) {
-                        dialogBinding.tilTitle.error = getString(R.string.action_error_title_required)
-                        return@setOnClickListener
-                    } else {
-                        dialogBinding.tilTitle.error = null
-                    }
+                        viewModel.saveAction(
+                            existingId = existing?.id,
+                            title = title,
+                            cadence = cadence,
+                            targetMinutes = targetMinutes,
+                            linkedGoalId = selectedGoalId
+                        )
 
-                    val targetMinutes: Int? = when {
-                        targetMinutesRaw.isNullOrBlank() -> null
-                        else -> targetMinutesRaw.toIntOrNull()
-                    }
-
-                    // If they typed something non-numeric, show a clear error.
-                    if (!targetMinutesRaw.isNullOrBlank() && targetMinutes == null) {
-                        dialogBinding.tilTargetMinutes.error =
-                            getString(R.string.action_error_target_minutes_number)
-                        return@setOnClickListener
-                    }
-
-                    if (targetMinutes != null && targetMinutes <= 0) {
-                        dialogBinding.tilTargetMinutes.error =
-                            getString(R.string.action_error_target_minutes_positive)
-                        return@setOnClickListener
-                    } else {
-                        dialogBinding.tilTargetMinutes.error = null
-                    }
-
-                    viewModel.saveAction(
-                        existing = existing,
-                        title = title,
-                        cadence = selectedCadence,
-                        targetMinutes = targetMinutes,
-                        linkedGoalId = selectedGoalId
-                    )
-                    dialog.dismiss()
-                }
-
-                // ARCHIVE handler (only when editing)
-                if (existing != null) {
-                    dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                        confirmArchiveAction(existing)
                         dialog.dismiss()
                     }
                 }
-            }
-
-            dialog.show()
         }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 }

@@ -82,9 +82,11 @@ class AimViewModel @Inject constructor(
                     title = g.title,
                     why = g.why,
                     horizon = g.horizon,
-                    targetDate = g.targetDate
+                    targetDate = g.targetDate,
+                    parentGoalId = g.parentGoalId
                 )
             }
+
 
             if (chiefAim == null) {
                 AimUiState.Empty(stats = stats, goals = goalUi, bucket = bucket)

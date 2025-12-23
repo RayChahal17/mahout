@@ -13,10 +13,6 @@
     app:strokeWidth="1dp"
     app:strokeColor="?attr/colorOutline">
 
-    <!--
-      Timer card is "fixed" (not inside a scroll view).
-      The RecyclerView below remains the only scrollable region.
-    -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -26,8 +22,7 @@
             android:id="@+id/tvTimerStatus"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="@string/path_timer_stopped"
-            android:textAppearance="@style/TextAppearance.Mahout.Body"
+            android:text="No timer running"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
@@ -38,7 +33,6 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_8"
             android:text="00:00"
-            android:textAppearance="@style/TextAppearance.Mahout.Title"
             app:layout_constraintTop_toBottomOf="@id/tvTimerStatus"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
@@ -49,11 +43,11 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_12"
-            android:text="@string/timer_action_start"
+            android:text="Start"
             app:layout_constraintTop_toBottomOf="@id/tvTimerElapsed"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/btnTimerSecondary"
-            app:layout_constraintHorizontalWeight="1"/>
+            app:layout_constraintHorizontal_chainStyle="spread"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnTimerSecondary"
@@ -61,12 +55,11 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="@dimen/spacing_12"
-            android:text="@string/timer_action_stop"
+            android:text="Stop"
             android:visibility="gone"
             app:layout_constraintTop_toTopOf="@id/btnTimerPrimary"
             app:layout_constraintStart_toEndOf="@id/btnTimerPrimary"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontalWeight="1"/>
+            app:layout_constraintEnd_toEndOf="parent"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

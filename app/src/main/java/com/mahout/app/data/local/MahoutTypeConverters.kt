@@ -8,20 +8,17 @@ import com.mahout.app.domain.northstar.model.MemoryPeriodType
 import com.mahout.app.domain.path.model.ActionCadence
 import com.mahout.app.domain.path.model.ActionTrackingType
 import com.mahout.app.domain.path.model.SessionSource
+import com.mahout.app.domain.path.model.TimerStatus
 import java.time.Instant
 import java.time.LocalDate
 
 /**
  * Room can only store "primitive-ish" types (String/Long/Int/etc).
  * TypeConverters teach Room how to store richer types (enums, Instant, LocalDate).
- *
- * Red-team note:
- * - Enums are stored using enum.name => renaming enum constants later requires a DB migration.
- *   So keep enum constant names stable once released.
  */
 class MahoutTypeConverters {
 
-    // region java.time
+    // region Instant / LocalDate
 
     @TypeConverter
     fun instantToEpochMillis(value: Instant?): Long? = value?.toEpochMilli()
@@ -31,10 +28,10 @@ class MahoutTypeConverters {
         value?.let { Instant.ofEpochMilli(it) }
 
     @TypeConverter
-    fun localDateToIso(value: LocalDate?): String? = value?.toString() // ISO-8601
+    fun localDateToString(value: LocalDate?): String? = value?.toString()
 
     @TypeConverter
-    fun isoToLocalDate(value: String?): LocalDate? =
+    fun stringToLocalDate(value: String?): LocalDate? =
         value?.let { LocalDate.parse(it) }
 
     // endregion
@@ -79,6 +76,13 @@ class MahoutTypeConverters {
     @TypeConverter
     fun stringToSessionSource(value: String?): SessionSource? =
         value?.let { SessionSource.valueOf(it) }
+
+    @TypeConverter
+    fun timerStatusToString(value: TimerStatus?): String? = value?.name
+
+    @TypeConverter
+    fun stringToTimerStatus(value: String?): TimerStatus? =
+        value?.let { TimerStatus.valueOf(it) }
 
     // endregion
 

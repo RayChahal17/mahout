@@ -12,50 +12,33 @@ import java.time.Instant
 import javax.inject.Inject
 
 /**
- * Room-backed implementation of GoalRepository.
- *
- * Key rule: repo methods operate on DOMAIN models (Goal),
- * and delegate persistence to DAO using ENTITY models (GoalEntity).
+ * Room-backed GoalRepository.
  */
 class RoomGoalRepository @Inject constructor(
     private val dao: GoalDao
 ) : GoalRepository {
 
-    override fun observeGoals(): Flow<List<Goal>> {
-        return dao.observeGoals()
-            .map { entities -> entities.map { it.toDomain() } }
-    }
+    override fun observeGoals(): Flow<List<Goal>> =
+        dao.observeGoals().map { it.map { e -> e.toDomain() } }
 
-    override fun observeActiveGoals(): Flow<List<Goal>> {
-        return dao.observeActiveGoals()
-            .map { entities -> entities.map { it.toDomain() } }
-    }
+    override fun observeActiveGoals(): Flow<List<Goal>> =
+        dao.observeActiveGoals().map { it.map { e -> e.toDomain() } }
 
-    override suspend fun getGoal(goalId: String): Goal? {
-        return dao.getById(goalId)?.toDomain()
-    }
+    override fun observeGoal(goalId: String): Flow<Goal?> =
+        dao.observeGoal(goalId).map { it?.toDomain() }
+
+    override suspend fun getGoal(goalId: String): Goal? =
+        dao.getById(goalId)?.toDomain()
 
     override suspend fun upsert(goal: Goal) {
         dao.upsert(goal.toEntity())
     }
 
-    /**
-     * Backwards-compatible implementation:
-     * ArchiveGoalUseCase calls this, so it MUST exist.
-     */
     override suspend fun updateStatus(goalId: String, status: GoalStatus, updatedAt: Instant) {
-        dao.updateStatus(
-            goalId = goalId,
-            newStatus = status,
-            updatedAt = updatedAt
-        )
+        dao.updateStatus(goalId = goalId, newStatus = status, updatedAt = updatedAt)
     }
 
-    /**
-     * Convenience helper (optional for new code).
-     * Uses the default implementation from interface, but you can also override if you prefer.
-     */
-    override suspend fun archiveGoal(goalId: String, updatedAt: Instant) {
-        updateStatus(goalId, GoalStatus.ARCHIVED, updatedAt)
+    override suspend fun softDelete(goalId: String, deletedAt: Instant) {
+        dao.softDelete(goalId, deletedAt)
     }
 }

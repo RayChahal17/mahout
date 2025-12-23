@@ -24,12 +24,14 @@ import com.mahout.app.data.local.northstar.entity.FutureProfileEntity
 import com.mahout.app.data.local.northstar.entity.MemorySummaryEntity
 import com.mahout.app.data.local.northstar.entity.NorthStarMessageEntity
 import com.mahout.app.data.local.path.dao.SessionDao
+import com.mahout.app.data.local.path.dao.TimerStateDao
 import com.mahout.app.data.local.path.entity.SessionEntity
+import com.mahout.app.data.local.path.entity.TimerStateEntity
 
 /**
- * Single Room database for V1 (local-first).
+ * Single Room database for v1.
  *
- * exportSchema=true will write schema JSON to app/schemas when Gradle runs.
+ * We keep everything in one DB for simplicity.
  */
 @Database(
     entities = [
@@ -41,6 +43,7 @@ import com.mahout.app.data.local.path.entity.SessionEntity
 
         // Path (TIME only)
         SessionEntity::class,
+        TimerStateEntity::class,
 
         // Elephant
         MoodLogEntity::class,
@@ -53,8 +56,7 @@ import com.mahout.app.data.local.path.entity.SessionEntity
         FutureProfileEntity::class,
         NorthStarMessageEntity::class
     ],
-    version = 4, // ✅ bumped: added ChiefAim.targetDate
-    exportSchema = true
+    version = 5, // ✅ bumped: add TimerState (ForegroundService timer)
 )
 @TypeConverters(MahoutTypeConverters::class)
 abstract class MahoutDatabase : RoomDatabase() {
@@ -67,6 +69,7 @@ abstract class MahoutDatabase : RoomDatabase() {
 
     // Path
     abstract fun sessionDao(): SessionDao
+    abstract fun timerStateDao(): TimerStateDao
 
     // Elephant
     abstract fun moodLogDao(): MoodLogDao
@@ -80,17 +83,39 @@ abstract class MahoutDatabase : RoomDatabase() {
     abstract fun northStarMessageDao(): NorthStarMessageDao
 
     companion object {
+
         /**
          * Migration 3 → 4:
-         * Add nullable targetDate column to chief_aim table.
-         *
-         * Why nullable?
-         * - Existing users may already have a Chief Aim saved.
-         * - We don’t want to wipe their DB during dev.
+         * Add Chief Aim target date.
          */
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE chief_aim ADD COLUMN targetDate TEXT")
+            }
+        }
+
+        /**
+         * Migration 4 → 5:
+         * Add timer_state table (singleton timer row).
+         *
+         * Why a separate table?
+         * - We need to represent RUNNING vs PAUSED vs STOPPED.
+         * - Sessions alone can't reliably express "paused" without adding columns.
+         */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS timer_state (
+                        timerId TEXT NOT NULL PRIMARY KEY,
+                        status TEXT NOT NULL,
+                        actionId TEXT,
+                        currentSessionId TEXT,
+                        accumulatedMillis INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
             }
         }
     }
