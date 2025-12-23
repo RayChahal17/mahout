@@ -41,31 +41,27 @@ class PathFragment : Fragment() {
 
     private val viewModel: PathViewModel by viewModels()
 
-    // We cache latest data so we can render consistently when either "mode" or "data" changes.
     private var latestActions: List<Action> = emptyList()
     private var latestTimerState: TimerState? = null
-
-    // This is the key UI mode state: Actions tab vs Checklist tab.
     private var isActionsMode: Boolean = true
 
     private var uiTickerJob: Job? = null
-
     private var pendingStartActionId: String? = null
+
+    /**
+     * ✅ IMPORTANT FIX:
+     * We do NOT use `by lazy { ... adapter ... }` because referencing adapter inside its
+     * lazy initializer causes Kotlin recursive type inference errors.
+     */
+    private lateinit var adapter: ActionListAdapter
 
     private val requestPostNotifications =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             val actionId = pendingStartActionId
             pendingStartActionId = null
-
             if (granted && actionId != null) startTimerService(actionId)
             else binding.root.showSnackbar("Notifications are required to show timer controls.")
         }
-
-    private val adapter = ActionListAdapter(
-        onClick = { action -> showEditActionDialog(existing = action) },
-        onLongClick = { action -> confirmArchiveAction(action) },
-        onTimerClick = { action -> onActionTimerClick(action) }
-    )
 
     private object CadenceLabels {
         const val DAILY = "Daily"
@@ -85,19 +81,37 @@ class PathFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Grid like your mock (2 columns)
-        binding.rvActions.layoutManager = GridLayoutManager(requireContext(), 2)
+        // ✅ Create adapter here (no recursion possible).
+        adapter = ActionListAdapter(
+            onActionClick = { action -> showEditActionDialog(existing = action) },
+            onActionLongClick = { action -> confirmArchiveAction(action) },
+            onActionTimerClick = { action -> onActionTimerClick(action) },
+            onToggleCardSize = { adapter.toggleCardSize() } // safe now
+        )
+
+        // Grid: 2 columns for cards. Headers/messages span across both columns.
+        val glm = GridLayoutManager(requireContext(), 2)
+        glm.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+            override fun getSpanSize(position: Int): Int {
+                return when (adapter.currentList.getOrNull(position)) {
+                    is PathRow.ActionRow -> 1
+                    else -> 2
+                }
+            }
+        }
+
+        binding.rvActions.layoutManager = glm
         binding.rvActions.adapter = adapter
 
-        // Default selection = Actions
+        // Toggle: Actions vs Checklist
         binding.toggleMode.check(binding.btnModeActions.id)
         isActionsMode = true
-        renderContent()
+        renderMode()
 
         binding.toggleMode.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
             isActionsMode = (checkedId == binding.btnModeActions.id)
-            renderContent()
+            renderMode()
         }
 
         binding.btnAddAction.setOnClickListener { showEditActionDialog(existing = null) }
@@ -112,22 +126,10 @@ class PathFragment : Fragment() {
         super.onDestroyView()
     }
 
-    /**
-     * ✅ Single source of truth for visibility.
-     * This prevents the classic bug: RV becomes invisible and never comes back.
-     */
-    private fun renderContent() {
-        val hasActions = latestActions.isNotEmpty()
-
-        // Actions mode: show either RV or empty state.
-        binding.rvActions.isVisible = isActionsMode && hasActions
-        binding.emptyState.root.isVisible = isActionsMode && !hasActions
-
-        // Checklist mode: hide action views, show placeholder.
+    private fun renderMode() {
+        binding.rvActions.isVisible = isActionsMode && latestActions.isNotEmpty()
+        binding.emptyState.root.isVisible = isActionsMode && latestActions.isEmpty()
         binding.tvChecklistPlaceholder.isVisible = !isActionsMode
-
-        // Timer tray is independent of mode.
-        latestTimerState?.let { renderTimerTray(it) }
     }
 
     private fun collectUi() {
@@ -137,18 +139,15 @@ class PathFragment : Fragment() {
                 launch {
                     viewModel.actions.collect { list ->
                         latestActions = list
-                        adapter.submitList(list)
-
-                        // IMPORTANT: Always re-render visibility using latest data.
-                        renderContent()
+                        rebuildRows()
+                        renderMode()
                     }
                 }
 
                 launch {
                     viewModel.timerState.collect { state ->
                         latestTimerState = state
-                        adapter.updateTimerState(state)
-
+                        rebuildRows()
                         renderTimerTray(state)
 
                         if (state.status == TimerStatus.RUNNING) startUiTicker() else stopUiTicker()
@@ -166,14 +165,113 @@ class PathFragment : Fragment() {
         }
     }
 
+    private fun rebuildRows() {
+        val timerState = latestTimerState
+        val actions = latestActions
+
+        if (actions.isEmpty()) {
+            adapter.submitList(emptyList())
+            return
+        }
+
+        // Day 12 safe grouping:
+        // - Weekly cadence => "This week's actions"
+        // - Everything else => "Today's actions"
+        val today = actions.filter { it.cadence != ActionCadence.WEEKLY }
+        val week = actions.filter { it.cadence == ActionCadence.WEEKLY }
+
+        val rows = mutableListOf<PathRow>()
+
+        rows += PathRow.HeaderRow(title = "Today’s actions", showSizeToggle = true)
+        rows += today.map { action -> buildActionRow(action, timerState) }
+
+        rows += PathRow.HeaderRow(title = "This week’s actions", showSizeToggle = false)
+        if (week.isEmpty()) rows += PathRow.MessageRow("No weekly actions yet.")
+        else rows += week.map { action -> buildActionRow(action, timerState) }
+
+        rows += PathRow.HeaderRow(title = "Archived actions", showSizeToggle = false)
+        // Day 12: we’re still observing only active actions => archived list placeholder.
+        rows += PathRow.MessageRow("Archived actions will appear here (Day 13).")
+
+        adapter.submitList(rows)
+    }
+
     /**
-     * TimerState doesn't emit every second. We update elapsed locally while RUNNING.
+     * Day 12 progress rule (safe):
+     * - Only the currently running/paused action shows real progress (from TimerState).
+     * - Other actions show 0m until Day 13 where we sum sessions for today/week.
      */
+    private fun buildActionRow(action: Action, timerState: TimerState?): PathRow.ActionRow {
+        val isActiveForThisAction =
+            timerState != null &&
+                    timerState.actionId == action.id &&
+                    timerState.status != TimerStatus.STOPPED
+
+        val totalMillis = if (isActiveForThisAction) computeTimerTotalMillis(timerState) else 0L
+        val minutesDone = (totalMillis / 60_000L).toInt().coerceAtLeast(0)
+
+        val targetMinutes = action.targetValue ?: 0
+        val percent =
+            if (targetMinutes > 0) ((minutesDone * 100) / targetMinutes).coerceIn(0, 100)
+            else 0
+
+        val progressLabel =
+            if (targetMinutes > 0) "${minutesDone}m / ${targetMinutes}m"
+            else "${minutesDone}m"
+
+        val cadenceText = when (action.cadence) {
+            ActionCadence.DAILY -> "Repeats daily"
+            ActionCadence.WEEKLY -> "Repeats weekly"
+            ActionCadence.ONE_TIME -> "One-time"
+        }
+
+        val metaText =
+            if (targetMinutes > 0) "$cadenceText • Target ${targetMinutes}m"
+            else cadenceText
+
+        // Button logic (safe behavior):
+        val timerButtonText: String
+        val timerEnabled: Boolean
+
+        if (timerState == null || timerState.status == TimerStatus.STOPPED) {
+            timerButtonText = "Start"
+            timerEnabled = true
+        } else {
+            if (timerState.actionId == action.id) {
+                timerButtonText = "Stop"
+                timerEnabled = true
+            } else {
+                timerButtonText = "Start"
+                timerEnabled = false
+            }
+        }
+
+        return PathRow.ActionRow(
+            action = action,
+            metaText = metaText,
+            progressPercent = percent,
+            progressLabel = progressLabel,
+            timerButtonText = timerButtonText,
+            timerButtonEnabled = timerEnabled
+        )
+    }
+
+    private fun computeTimerTotalMillis(state: TimerState): Long {
+        val runningExtra = if (state.status == TimerStatus.RUNNING) {
+            val now = System.currentTimeMillis()
+            (now - state.updatedAt.toEpochMilli()).coerceAtLeast(0L)
+        } else 0L
+
+        return (state.accumulatedMillis + runningExtra).coerceAtLeast(0L)
+    }
+
     private fun startUiTicker() {
         if (uiTickerJob?.isActive == true) return
         uiTickerJob = viewLifecycleOwner.lifecycleScope.launch {
             while (true) {
-                latestTimerState?.let { updateTrayElapsedOnly(it) }
+                latestTimerState?.let { renderTimerTray(it) }
+                // Also rebuild list so the running card’s progress updates.
+                rebuildRows()
                 delay(1_000L)
             }
         }
@@ -194,24 +292,12 @@ class PathFragment : Fragment() {
         val actionTitle = state.actionId
             ?.let { id -> latestActions.firstOrNull { it.id == id }?.title }
             ?: "Unknown action"
-
         tray.tvTrayActionTitle.text = actionTitle
+
         tray.btnTrayStop.setOnClickListener { sendTimerCommand(TimerServiceContract.ACTION_STOP) }
 
-        updateTrayElapsedOnly(state)
-    }
-
-    private fun updateTrayElapsedOnly(state: TimerState) {
-        val tray = binding.timerTray
-
-        val runningExtraMillis = if (state.status == TimerStatus.RUNNING) {
-            val now = System.currentTimeMillis()
-            (now - state.updatedAt.toEpochMilli()).coerceAtLeast(0L)
-        } else 0L
-
-        val totalMillis = (state.accumulatedMillis + runningExtraMillis).coerceAtLeast(0L)
+        val totalMillis = computeTimerTotalMillis(state)
         val d = Duration.ofMillis(totalMillis)
-
         val hours = d.toHours()
         val minutes = (d.toMinutes() % 60)
         val seconds = (d.seconds % 60)
@@ -221,16 +307,28 @@ class PathFragment : Fragment() {
         } else {
             String.format("%02d:%02d", minutes, seconds)
         }
+
+        // Tray progress uses running action’s targetValue if available.
+        val targetMinutes = state.actionId
+            ?.let { id -> latestActions.firstOrNull { it.id == id }?.targetValue }
+            ?: 0
+
+        val doneMinutes = (totalMillis / 60_000L).toInt().coerceAtLeast(0)
+
+        val pct =
+            if (targetMinutes > 0) ((doneMinutes * 100) / targetMinutes).coerceIn(0, 100)
+            else 0
+
+        tray.pbTrayProgress.progress = pct
+        tray.tvTrayProgressLabel.text =
+            if (targetMinutes > 0) "${doneMinutes}m / ${targetMinutes}m" else "${doneMinutes}m"
     }
 
     private fun onActionTimerClick(action: Action) {
         val state = latestTimerState
-
         when (state?.status ?: TimerStatus.STOPPED) {
             TimerStatus.STOPPED -> ensureNotificationPermissionThenStart(action.id)
-
-            TimerStatus.RUNNING,
-            TimerStatus.PAUSED -> {
+            TimerStatus.RUNNING, TimerStatus.PAUSED -> {
                 if (state?.actionId == action.id) {
                     sendTimerCommand(TimerServiceContract.ACTION_STOP)
                 } else {
@@ -251,8 +349,7 @@ class PathFragment : Fragment() {
             android.Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
 
-        if (granted) startTimerService(actionId)
-        else {
+        if (granted) startTimerService(actionId) else {
             pendingStartActionId = actionId
             requestPostNotifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
         }
@@ -283,7 +380,7 @@ class PathFragment : Fragment() {
     }
 
     /**
-     * Uses your dialog binding IDs:
+     * Dialog uses your real binding IDs:
      * - actvCadence
      * - actvGoalLink
      */

@@ -21,12 +21,11 @@
             android:id="@+id/tvTrayElapsed"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0:00:00"
+            android:text="00:00"
             android:textStyle="bold"
             android:textSize="18sp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"/>
+            app:layout_constraintTop_toTopOf="parent"/>
 
         <TextView
             android:id="@+id/tvTrayLabel"
@@ -60,8 +59,29 @@
             android:layout_height="40dp"
             android:text="Stop"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"/>
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <ProgressBar
+            android:id="@+id/pbTrayProgress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="8dp"
+            android:layout_marginTop="@dimen/spacing_12"
+            android:max="100"
+            android:progress="0"
+            app:layout_constraintTop_toBottomOf="@id/tvTrayElapsed"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <TextView
+            android:id="@+id/tvTrayProgressLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_8"
+            android:text="0m / 0m"
+            android:textSize="12sp"
+            app:layout_constraintTop_toBottomOf="@id/pbTrayProgress"
+            app:layout_constraintStart_toStartOf="parent"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

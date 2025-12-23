@@ -62,7 +62,7 @@
                 android:id="@+id/tvTimelinePlaceholder"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Timeline coming soon (Day X). This is the design shell."
+                android:text="Timeline coming soon."
                 android:textSize="14sp"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -100,18 +100,6 @@
 
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
-    <TextView
-        android:id="@+id/tvTodaysActionsTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/screen_padding"
-        android:layout_marginTop="@dimen/spacing_16"
-        android:text="Today’s actions"
-        android:textStyle="bold"
-        android:textSize="18sp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toggleMode"/>
-
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvActions"
         android:layout_width="0dp"
@@ -120,8 +108,8 @@
         android:layout_marginEnd="@dimen/screen_padding"
         android:layout_marginTop="@dimen/spacing_12"
         android:clipToPadding="false"
-        android:paddingBottom="140dp"
-        app:layout_constraintTop_toBottomOf="@id/tvTodaysActionsTitle"
+        android:paddingBottom="160dp"
+        app:layout_constraintTop_toBottomOf="@id/toggleMode"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
@@ -136,7 +124,7 @@
         android:text="Checklist view coming soon."
         android:visibility="gone"
         android:textSize="16sp"
-        app:layout_constraintTop_toBottomOf="@id/tvTodaysActionsTitle"
+        app:layout_constraintTop_toBottomOf="@id/toggleMode"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
@@ -148,7 +136,7 @@
         android:layout_height="0dp"
         android:layout_marginStart="@dimen/screen_padding"
         android:layout_marginEnd="@dimen/screen_padding"
-        app:layout_constraintTop_toBottomOf="@id/tvTodaysActionsTitle"
+        app:layout_constraintTop_toBottomOf="@id/toggleMode"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
