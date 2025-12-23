@@ -1,259 +1,322 @@
 package com.mahout.app.ui.path.timer
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
-import com.mahout.app.R
-import com.mahout.app.core.dispatchers.DispatcherProvider
-import com.mahout.app.core.time.TimeProvider
+import android.util.Log
+import androidx.annotation.RequiresPermission
+import androidx.core.app.NotificationManagerCompat
 import com.mahout.app.domain.path.model.TimerState
 import com.mahout.app.domain.path.model.TimerStatus
 import com.mahout.app.domain.path.repository.ActionRepository
-import com.mahout.app.domain.path.usecase.ObserveTimerStateUseCase
+import com.mahout.app.domain.path.usecase.timer.ObserveTimerStateUseCase
 import com.mahout.app.domain.path.usecase.timer.PauseTimerUseCase
 import com.mahout.app.domain.path.usecase.timer.ResumeTimerUseCase
 import com.mahout.app.domain.path.usecase.timer.StartTimerUseCase
 import com.mahout.app.domain.path.usecase.timer.StopTimerUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.time.Duration
+import kotlinx.coroutines.withContext
+import java.time.Instant
 import javax.inject.Inject
 
+/**
+ * Foreground timer service.
+ *
+ * IMPORTANT (targetSdk 36):
+ * - Manifest must declare android:foregroundServiceType="dataSync"
+ * - Code must call startForeground(id, notification, TYPE_...) on API 29+
+ *
+ * IMPORTANT (bug fix):
+ * - TimerState flow emits STOPPED immediately by default.
+ * - If we stopSelf() on that initial STOPPED, the service dies before StartTimerUseCase updates state.
+ * - We use a "start grace window" to prevent this race.
+ */
 @AndroidEntryPoint
 class TimerForegroundService : Service() {
 
-    @Inject lateinit var dispatcherProvider: DispatcherProvider
-    @Inject lateinit var timeProvider: TimeProvider
+    companion object {
+        private const val TAG = "TimerFGS"
 
-    @Inject lateinit var actionRepository: ActionRepository
+        /**
+         * How long we wait after a START/TOGGLE-start before deciding "start failed".
+         * If timer state is still STOPPED after this, we stop the service.
+         */
+        private const val START_GRACE_MS = 2000L
+    }
 
-    @Inject lateinit var observeTimerStateUseCase: ObserveTimerStateUseCase
     @Inject lateinit var startTimerUseCase: StartTimerUseCase
     @Inject lateinit var pauseTimerUseCase: PauseTimerUseCase
     @Inject lateinit var resumeTimerUseCase: ResumeTimerUseCase
     @Inject lateinit var stopTimerUseCase: StopTimerUseCase
+    @Inject lateinit var observeTimerStateUseCase: ObserveTimerStateUseCase
+    @Inject lateinit var actionRepository: ActionRepository
 
-    private val serviceJob: Job = SupervisorJob()
-    private val serviceScope: CoroutineScope by lazy {
-        CoroutineScope(serviceJob + dispatcherProvider.default)
-    }
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    private var tickerJob: Job? = null
+    private lateinit var notificationFactory: TimerNotificationFactory
 
-    private var cachedActionId: String? = null
-    private var cachedActionTitle: String? = null
+    private var latestState: TimerState? = null
+    private var latestActionTitle: String? = null
+    private var isInForeground: Boolean = false
+
+    /**
+     * If not null, we are actively trying to start a timer for this actionId.
+     * During this period we ignore the initial STOPPED emission.
+     */
+    private var pendingStartActionId: String? = null
+
+    /**
+     * Timeout job that will stop the service if start never succeeds.
+     */
+    private var pendingStartTimeoutJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannelIfNeeded()
+        Log.d(TAG, "onCreate()")
+        notificationFactory = TimerNotificationFactory(this)
+        ensureNotificationChannel()
+
+        // Collect timer state and keep notification in sync.
+        serviceScope.launch {
+            observeTimerStateUseCase().collectLatest { state ->
+                latestState = state
+                Log.d(TAG, "TimerState update: status=${state.status} actionId=${state.actionId}")
+
+                when (state.status) {
+                    TimerStatus.RUNNING, TimerStatus.PAUSED -> {
+                        // ✅ Start succeeded (or timer is active). Cancel any pending start guard.
+                        pendingStartActionId = null
+                        pendingStartTimeoutJob?.cancel()
+                        pendingStartTimeoutJob = null
+
+                        ensureForeground(state)
+                        postNotificationUpdate(state)
+                    }
+
+                    TimerStatus.STOPPED -> {
+                        // 🚨 Bug fix: STOPPED is the default initial state.
+                        // If we stopSelf() immediately here, the service dies before StartTimerUseCase updates state.
+                        if (pendingStartActionId != null) {
+                            Log.d(
+                                TAG,
+                                "Ignoring STOPPED because start is pending for actionId=$pendingStartActionId"
+                            )
+
+                            // Keep showing a notification (placeholder) while start is pending.
+                            ensureForeground(state)
+                            postNotificationUpdate(state)
+                            return@collectLatest
+                        }
+
+                        // Normal STOPPED when nothing is pending -> shut down service.
+                        stopForegroundCompat()
+                        stopSelf()
+                    }
+                }
+            }
+        }
     }
 
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent == null) {
-            restoreFromPersistedState()
-            return START_STICKY
-        }
+        val action = intent?.action
+        Log.d(TAG, "onStartCommand action=$action extras=${intent?.extras}")
 
-        when (intent.action) {
-            TimerServiceContract.ACTION_START -> {
+        when (action) {
+
+            TimerServiceContract.ACTION_TOGGLE -> {
+                val current = latestState
+
+                // If running or paused -> stop
+                if (current != null && current.status != TimerStatus.STOPPED) {
+                    Log.d(TAG, "TOGGLE -> stopTimerUseCase()")
+                    serviceScope.launch {
+                        try {
+                            stopTimerUseCase()
+                        } catch (t: Throwable) {
+                            Log.e(TAG, "stopTimerUseCase failed", t)
+                        }
+                    }
+                    return START_STICKY
+                }
+
+                // If stopped -> start (requires actionId)
                 val actionId = intent.getStringExtra(TimerServiceContract.EXTRA_ACTION_ID)
-                if (actionId == null) {
+                if (actionId.isNullOrBlank()) {
+                    Log.e(TAG, "TOGGLE requested start but EXTRA_ACTION_ID was missing")
                     stopSelf()
                     return START_NOT_STICKY
                 }
 
-                startForegroundCompat(buildNotificationPlaceholder())
-
-                serviceScope.launch {
-                    startTimerUseCase(actionId)
-                    refreshNotificationOnce()
-                    startTickerIfRunning()
-                }
+                startWithGrace(actionId)
             }
 
             TimerServiceContract.ACTION_PAUSE -> {
+                Log.d(TAG, "PAUSE")
                 serviceScope.launch {
-                    pauseTimerUseCase()
-                    refreshNotificationOnce()
-                    stopTicker()
+                    try {
+                        pauseTimerUseCase()
+                    } catch (t: Throwable) {
+                        Log.e(TAG, "pauseTimerUseCase failed", t)
+                    }
                 }
             }
 
             TimerServiceContract.ACTION_RESUME -> {
+                Log.d(TAG, "RESUME")
                 serviceScope.launch {
-                    resumeTimerUseCase()
-                    refreshNotificationOnce()
-                    startTickerIfRunning()
+                    try {
+                        resumeTimerUseCase()
+                    } catch (t: Throwable) {
+                        Log.e(TAG, "resumeTimerUseCase failed", t)
+                    }
                 }
             }
 
             TimerServiceContract.ACTION_STOP -> {
+                Log.d(TAG, "STOP")
                 serviceScope.launch {
-                    stopTimerUseCase()
-                    stopTicker()
-                    stopForegroundCompat(removeNotification = true)
-                    stopSelf()
+                    try {
+                        stopTimerUseCase()
+                    } catch (t: Throwable) {
+                        Log.e(TAG, "stopTimerUseCase failed", t)
+                    }
                 }
             }
 
-            else -> restoreFromPersistedState()
+            TimerServiceContract.ACTION_START -> {
+                // Compatibility path (UI should prefer TOGGLE)
+                val actionId = intent.getStringExtra(TimerServiceContract.EXTRA_ACTION_ID)
+                if (actionId.isNullOrBlank()) {
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
+                startWithGrace(actionId)
+            }
+
+            else -> {
+                // system restart case
+                val state = latestState
+                if (state == null || state.status == TimerStatus.STOPPED) {
+                    stopSelf()
+                    return START_NOT_STICKY
+                } else {
+                    ensureForeground(state)
+                    postNotificationUpdate(state)
+                }
+            }
         }
 
         return START_STICKY
     }
 
+    /**
+     * Starts a timer safely, without the race where STOPPED initial emission kills the service.
+     */
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
+    private fun startWithGrace(actionId: String) {
+        Log.d(TAG, "Start requested for actionId=$actionId")
+
+        // Mark start as pending so STOPPED doesn't immediately kill us.
+        pendingStartActionId = actionId
+
+        // Cancel any previous start attempt timeout and schedule a new one.
+        pendingStartTimeoutJob?.cancel()
+        pendingStartTimeoutJob = serviceScope.launch {
+            delay(START_GRACE_MS)
+
+            val state = latestState
+            val stillStopped = (state == null || state.status == TimerStatus.STOPPED)
+
+            if (stillStopped && pendingStartActionId == actionId) {
+                Log.e(TAG, "Start grace expired: timer still STOPPED. Stopping service.")
+                pendingStartActionId = null
+                stopForegroundCompat()
+                stopSelf()
+            }
+        }
+
+        // Enter foreground immediately with placeholder so Android doesn't kill us.
+        val placeholder = createPlaceholderState(
+            status = TimerStatus.RUNNING,
+            actionId = actionId
+        )
+        ensureForeground(placeholder)
+        postNotificationUpdate(placeholder)
+
+        // Do the real start work in coroutine.
+        serviceScope.launch {
+            try {
+                // Get title for notification (IO)
+                latestActionTitle = withContext(Dispatchers.IO) {
+                    actionRepository.getAction(actionId)?.title
+                }
+
+                Log.d(TAG, "Calling startTimerUseCase(actionId=$actionId)")
+                startTimerUseCase(actionId)
+                Log.d(TAG, "startTimerUseCase returned normally")
+            } catch (t: Throwable) {
+                // If start fails silently, we'd otherwise wait until grace timeout.
+                Log.e(TAG, "startTimerUseCase failed", t)
+            }
+        }
+    }
+
     override fun onDestroy() {
-        stopTicker()
+        Log.d(TAG, "onDestroy()")
         serviceScope.cancel()
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun restoreFromPersistedState() {
-        serviceScope.launch {
-            val state = observeTimerStateUseCase().first()
-
-            if (state.status == TimerStatus.STOPPED) {
-                stopForegroundCompat(removeNotification = true)
-                stopSelf()
-            } else {
-                val actionTitle = resolveActionTitle(state.actionId)
-                startForegroundCompat(buildNotificationForState(state, actionTitle))
-                if (state.status == TimerStatus.RUNNING) startTickerIfRunning() else stopTicker()
-            }
-        }
-    }
-
-    private fun startTickerIfRunning() {
-        stopTicker()
-        tickerJob = serviceScope.launch {
-            while (true) {
-                refreshNotificationOnce()
-                delay(1_000L)
-            }
-        }
-    }
-
-    private fun stopTicker() {
-        tickerJob?.cancel()
-        tickerJob = null
-    }
-
-    private suspend fun refreshNotificationOnce() {
-        val state = observeTimerStateUseCase().first()
-        val actionTitle = resolveActionTitle(state.actionId)
-
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(
-            TimerServiceContract.NOTIFICATION_ID,
-            buildNotificationForState(state, actionTitle)
+    private fun createPlaceholderState(status: TimerStatus, actionId: String): TimerState {
+        return TimerState(
+            status = status,
+            actionId = actionId,
+            currentSessionId = null,
+            accumulatedMillis = 0L,
+            updatedAt = Instant.now()
         )
     }
 
-    private fun buildNotificationPlaceholder(): Notification {
-        return NotificationCompat.Builder(this, TimerServiceContract.NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_timer_notification)
-            .setContentTitle(getString(R.string.timer_notification_starting_title))
-            .setContentText(getString(R.string.timer_notification_starting_body))
-            .setOngoing(true)
-            .build()
-    }
-
-    private fun buildNotificationForState(state: TimerState, actionTitle: String): Notification {
-        val (title, body) = when (state.status) {
-            TimerStatus.RUNNING ->
-                getString(R.string.timer_notification_running_title, actionTitle) to formatElapsedText(state)
-            TimerStatus.PAUSED ->
-                getString(R.string.timer_notification_paused_title, actionTitle) to formatElapsedText(state)
-            TimerStatus.STOPPED ->
-                getString(R.string.timer_notification_stopped_title) to getString(R.string.timer_notification_stopped_body)
-        }
-
-        val builder = NotificationCompat.Builder(this, TimerServiceContract.NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_timer_notification)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setOngoing(state.status != TimerStatus.STOPPED)
-            .setOnlyAlertOnce(true)
-
-        when (state.status) {
-            TimerStatus.RUNNING -> {
-                builder.addAction(0, getString(R.string.timer_action_pause), pendingIntentForAction(TimerServiceContract.ACTION_PAUSE))
-                builder.addAction(0, getString(R.string.timer_action_stop), pendingIntentForAction(TimerServiceContract.ACTION_STOP))
-            }
-            TimerStatus.PAUSED -> {
-                builder.addAction(0, getString(R.string.timer_action_resume), pendingIntentForAction(TimerServiceContract.ACTION_RESUME))
-                builder.addAction(0, getString(R.string.timer_action_stop), pendingIntentForAction(TimerServiceContract.ACTION_STOP))
-            }
-            TimerStatus.STOPPED -> Unit
-        }
-
-        return builder.build()
-    }
-
-    private fun pendingIntentForAction(action: String): PendingIntent {
-        return PendingIntent.getService(
-            this,
-            action.hashCode(),
-            Intent(this, TimerForegroundService::class.java).setAction(action),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+    private fun ensureNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val mgr = getSystemService(NotificationManager::class.java)
+        val channel = NotificationChannel(
+            TimerServiceContract.NOTIFICATION_CHANNEL_ID,
+            TimerServiceContract.NOTIFICATION_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_LOW
         )
+        mgr.createNotificationChannel(channel)
     }
 
-    private suspend fun resolveActionTitle(actionId: String?): String {
-        if (actionId.isNullOrBlank()) {
-            cachedActionId = null
-            cachedActionTitle = null
-            return getString(R.string.timer_unknown_action)
+    private fun ensureForeground(state: TimerState) {
+        if (isInForeground) return
+        val notification = notificationFactory.build(state, latestActionTitle)
+
+        try {
+            startForegroundCompat(notification)
+            isInForeground = true
+            Log.d(TAG, "Entered foreground")
+        } catch (t: Throwable) {
+            Log.e(TAG, "startForeground failed", t)
+            stopSelf()
         }
-
-        if (actionId == cachedActionId && cachedActionTitle != null) {
-            return cachedActionTitle!!
-        }
-
-        val title = runCatching { actionRepository.getAction(actionId)?.title }.getOrNull()
-        val resolved = title?.takeIf { it.isNotBlank() } ?: getString(R.string.timer_unknown_action)
-
-        cachedActionId = actionId
-        cachedActionTitle = resolved
-        return resolved
-    }
-
-    private fun formatElapsedText(state: TimerState): String {
-        val now = timeProvider.nowInstant()
-        val runningExtraMillis = if (state.status == TimerStatus.RUNNING) {
-            (now.toEpochMilli() - state.updatedAt.toEpochMilli()).coerceAtLeast(0L)
-        } else 0L
-
-        val total = (state.accumulatedMillis + runningExtraMillis).coerceAtLeast(0L)
-        val duration = Duration.ofMillis(total)
-
-        val hours = duration.toHours()
-        val minutes = (duration.toMinutes() % 60)
-        val seconds = (duration.seconds % 60)
-
-        val formatted = if (hours > 0) {
-            String.format("%d:%02d:%02d", hours, minutes, seconds)
-        } else {
-            String.format("%02d:%02d", minutes, seconds)
-        }
-
-        return getString(R.string.timer_notification_elapsed, formatted)
     }
 
     private fun startForegroundCompat(notification: Notification) {
@@ -264,31 +327,31 @@ class TimerForegroundService : Service() {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
             )
         } else {
+            @Suppress("DEPRECATION")
             startForeground(TimerServiceContract.NOTIFICATION_ID, notification)
         }
     }
 
-    private fun stopForegroundCompat(removeNotification: Boolean) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(if (removeNotification) STOP_FOREGROUND_REMOVE else STOP_FOREGROUND_DETACH)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(removeNotification)
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
+    private fun postNotificationUpdate(state: TimerState) {
+        val notification = notificationFactory.build(state, latestActionTitle)
+        try {
+            NotificationManagerCompat.from(this).notify(
+                TimerServiceContract.NOTIFICATION_ID,
+                notification
+            )
+        } catch (t: Throwable) {
+            Log.e(TAG, "notify() failed", t)
         }
     }
 
-    private fun createNotificationChannelIfNeeded() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channel = NotificationChannel(
-            TimerServiceContract.NOTIFICATION_CHANNEL_ID,
-            getString(R.string.timer_notification_channel_name),
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            description = getString(R.string.timer_notification_channel_description)
+    private fun stopForegroundCompat() {
+        isInForeground = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
         }
-
-        manager.createNotificationChannel(channel)
     }
 }
