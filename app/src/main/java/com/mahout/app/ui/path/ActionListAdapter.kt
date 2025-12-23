@@ -11,6 +11,17 @@ import com.mahout.app.domain.path.model.ActionCadence
 import com.mahout.app.domain.path.model.TimerState
 import com.mahout.app.domain.path.model.TimerStatus
 
+/**
+ * Grid card adapter for "Today's actions".
+ *
+ * Timer behavior (V1 safe):
+ * - If timer is running/paused for a DIFFERENT action, disable Start on other cards.
+ * - If timer is for THIS action, show Stop (we map to service ACTION_STOP).
+ *
+ * NOTE:
+ * This file assumes your `Action` model uses:
+ * - id, title, cadence, targetValue
+ */
 class ActionListAdapter(
     private val onClick: (Action) -> Unit,
     private val onLongClick: (Action) -> Unit,
@@ -44,25 +55,25 @@ class ActionListAdapter(
         fun bind(item: Action) {
             binding.tvActionTitle.text = item.title
 
+            // Simple meta labels (we'll refine later when timeline/sessions exist)
             val cadenceLabel = when (item.cadence) {
-                ActionCadence.DAILY -> "Daily"
-                ActionCadence.WEEKLY -> "Weekly"
+                ActionCadence.DAILY -> "Repeats daily"
+                ActionCadence.WEEKLY -> "Repeats weekly"
                 ActionCadence.ONE_TIME -> "One-time"
             }
 
             val targetLabel = item.targetValue?.let { minutes ->
-                if (minutes >= 60) {
-                    val h = minutes / 60
-                    val m = minutes % 60
-                    if (m == 0) "${h}h" else "${h}h ${m}m"
-                } else {
-                    "${minutes}m"
-                }
+                "Target ${minutes}m"
             }
 
             binding.tvActionMeta.text =
-                if (targetLabel == null) cadenceLabel else "$cadenceLabel • $targetLabel target"
+                if (targetLabel == null) cadenceLabel else "$cadenceLabel • $targetLabel"
 
+            // Progress is placeholder for now (we'll compute using sessions later).
+            binding.pbProgress.progress = 0
+            binding.tvProgressLabel.text = "0m / ${item.targetValue ?: 0}m"
+
+            // Timer button state
             val state = timerStateProvider()
             val isThisAction = state?.actionId == item.id
 
@@ -72,19 +83,10 @@ class ActionListAdapter(
                     binding.btnTimer.isEnabled = true
                 }
 
-                TimerStatus.RUNNING -> {
-                    if (isThisAction) {
-                        binding.btnTimer.text = "Pause"
-                        binding.btnTimer.isEnabled = true
-                    } else {
-                        binding.btnTimer.text = "Start"
-                        binding.btnTimer.isEnabled = false
-                    }
-                }
-
+                TimerStatus.RUNNING,
                 TimerStatus.PAUSED -> {
                     if (isThisAction) {
-                        binding.btnTimer.text = "Resume"
+                        binding.btnTimer.text = "Stop"
                         binding.btnTimer.isEnabled = true
                     } else {
                         binding.btnTimer.text = "Start"

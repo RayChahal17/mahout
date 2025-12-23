@@ -16,7 +16,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mahout.app.databinding.DialogEditActionBinding
 import com.mahout.app.databinding.FragmentPathBinding
@@ -52,17 +52,14 @@ class PathFragment : Fragment() {
             val actionId = pendingStartActionId
             pendingStartActionId = null
 
-            if (granted && actionId != null) {
-                startTimerService(actionId)
-            } else {
-                binding.root.showSnackbar("Notifications are required to show timer controls.")
-            }
+            if (granted && actionId != null) startTimerService(actionId)
+            else binding.root.showSnackbar("Notifications are required to show timer controls.")
         }
 
     private val adapter = ActionListAdapter(
         onClick = { action -> showEditActionDialog(existing = action) },
         onLongClick = { action -> confirmArchiveAction(action) },
-        onTimerClick = { action -> handleRowTimerClick(action) }
+        onTimerClick = { action -> onActionTimerClick(action) }
     )
 
     private object CadenceLabels {
@@ -83,13 +80,20 @@ class PathFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.rvActions.layoutManager = LinearLayoutManager(requireContext())
+        // ✅ Grid like your mock (2 columns)
+        binding.rvActions.layoutManager = GridLayoutManager(requireContext(), 2)
         binding.rvActions.adapter = adapter
 
-        binding.btnAddAction.setOnClickListener { showEditActionDialog(existing = null) }
+        // Default toggle selection: Actions
+        binding.toggleMode.check(binding.btnModeActions.id)
+        renderMode(isActions = true)
 
-        // Initial render
-        renderTimerCard(TimerState.stopped(viewModel.timerState.value.updatedAt))
+        binding.toggleMode.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            renderMode(isActions = checkedId == binding.btnModeActions.id)
+        }
+
+        binding.btnAddAction.setOnClickListener { showEditActionDialog(existing = null) }
 
         collectUi()
     }
@@ -101,6 +105,12 @@ class PathFragment : Fragment() {
         super.onDestroyView()
     }
 
+    private fun renderMode(isActions: Boolean) {
+        binding.rvActions.isVisible = isActions
+        binding.emptyState.root.isVisible = false
+        binding.tvChecklistPlaceholder.isVisible = !isActions
+    }
+
     private fun collectUi() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -110,19 +120,20 @@ class PathFragment : Fragment() {
                         latestActions = list
                         adapter.submitList(list)
 
-                        binding.emptyState.root.isVisible = list.isEmpty()
-                        binding.rvActions.isVisible = list.isNotEmpty()
+                        val showEmpty = list.isEmpty() && binding.rvActions.isVisible
+                        binding.emptyState.root.isVisible = showEmpty
+                        binding.rvActions.isVisible = !showEmpty && binding.rvActions.isVisible
 
-                        latestTimerState?.let { renderTimerCard(it) }
+                        latestTimerState?.let { renderTimerTray(it) }
                     }
                 }
 
                 launch {
                     viewModel.timerState.collect { state ->
                         latestTimerState = state
-
-                        renderTimerCard(state)
                         adapter.updateTimerState(state)
+
+                        renderTimerTray(state)
 
                         if (state.status == TimerStatus.RUNNING) startUiTicker() else stopUiTicker()
                     }
@@ -139,12 +150,14 @@ class PathFragment : Fragment() {
         }
     }
 
+    /**
+     * TimerState does NOT emit every second, so we run a local ticker while RUNNING.
+     */
     private fun startUiTicker() {
         if (uiTickerJob?.isActive == true) return
-
         uiTickerJob = viewLifecycleOwner.lifecycleScope.launch {
             while (true) {
-                latestTimerState?.let { renderTimerElapsedOnly(it) }
+                latestTimerState?.let { updateTrayElapsedOnly(it) }
                 delay(1_000L)
             }
         }
@@ -155,46 +168,30 @@ class PathFragment : Fragment() {
         uiTickerJob = null
     }
 
-    private fun renderTimerCard(state: TimerState) {
-        val card = binding.timerCard
+    private fun renderTimerTray(state: TimerState) {
+        val tray = binding.timerTray
+
+        val isVisible = state.status == TimerStatus.RUNNING || state.status == TimerStatus.PAUSED
+        tray.root.isVisible = isVisible
+        if (!isVisible) return
 
         val actionTitle = state.actionId
             ?.let { id -> latestActions.firstOrNull { it.id == id }?.title }
             ?: "Unknown action"
 
-        when (state.status) {
-            TimerStatus.STOPPED -> {
-                card.tvTimerStatus.text = "No timer running"
-                card.btnTimerPrimary.text = "Start"
-                card.btnTimerSecondary.isVisible = false
-                card.btnTimerPrimary.setOnClickListener { showStartTimerPickerDialog() }
-            }
+        tray.tvTrayActionTitle.text = actionTitle
 
-            TimerStatus.RUNNING -> {
-                card.tvTimerStatus.text = "Running: $actionTitle"
-                card.btnTimerPrimary.text = "Pause"
-                card.btnTimerSecondary.text = "Stop"
-                card.btnTimerSecondary.isVisible = true
-                card.btnTimerPrimary.setOnClickListener { sendTimerCommand(TimerServiceContract.ACTION_PAUSE) }
-                card.btnTimerSecondary.setOnClickListener { sendTimerCommand(TimerServiceContract.ACTION_STOP) }
-            }
-
-            TimerStatus.PAUSED -> {
-                card.tvTimerStatus.text = "Paused: $actionTitle"
-                card.btnTimerPrimary.text = "Resume"
-                card.btnTimerSecondary.text = "Stop"
-                card.btnTimerSecondary.isVisible = true
-                card.btnTimerPrimary.setOnClickListener { sendTimerCommand(TimerServiceContract.ACTION_RESUME) }
-                card.btnTimerSecondary.setOnClickListener { sendTimerCommand(TimerServiceContract.ACTION_STOP) }
-            }
+        tray.btnTrayStop.setOnClickListener {
+            sendTimerCommand(TimerServiceContract.ACTION_STOP)
         }
 
-        renderTimerElapsedOnly(state)
+        updateTrayElapsedOnly(state)
     }
 
-    private fun renderTimerElapsedOnly(state: TimerState) {
-        val card = binding.timerCard
+    private fun updateTrayElapsedOnly(state: TimerState) {
+        val tray = binding.timerTray
 
+        // Same approximation used in notification for now.
         val runningExtraMillis = if (state.status == TimerStatus.RUNNING) {
             val now = System.currentTimeMillis()
             (now - state.updatedAt.toEpochMilli()).coerceAtLeast(0L)
@@ -207,50 +204,24 @@ class PathFragment : Fragment() {
         val minutes = (d.toMinutes() % 60)
         val seconds = (d.seconds % 60)
 
-        val formatted = if (hours > 0) {
+        tray.tvTrayElapsed.text = if (hours > 0) {
             String.format("%d:%02d:%02d", hours, minutes, seconds)
         } else {
             String.format("%02d:%02d", minutes, seconds)
         }
-
-        card.tvTimerElapsed.text = formatted
     }
 
-    private fun showStartTimerPickerDialog() {
-        if (latestActions.isEmpty()) {
-            binding.root.showSnackbar("Create an action first, then start a timer.")
-            return
-        }
-
-        val titles = latestActions.map { it.title }.toTypedArray()
-
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Start timer for…")
-            .setItems(titles) { _, which ->
-                val action = latestActions[which]
-                ensureNotificationPermissionThenStart(action.id)
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-    }
-
-    private fun handleRowTimerClick(action: Action) {
+    private fun onActionTimerClick(action: Action) {
         val state = latestTimerState
 
         when (state?.status ?: TimerStatus.STOPPED) {
             TimerStatus.STOPPED -> ensureNotificationPermissionThenStart(action.id)
 
-            TimerStatus.RUNNING -> {
-                if (state?.actionId == action.id) {
-                    sendTimerCommand(TimerServiceContract.ACTION_PAUSE)
-                } else {
-                    binding.root.showSnackbar("Stop the current timer first.")
-                }
-            }
-
+            TimerStatus.RUNNING,
             TimerStatus.PAUSED -> {
                 if (state?.actionId == action.id) {
-                    sendTimerCommand(TimerServiceContract.ACTION_RESUME)
+                    // Mock uses Stop (not Pause). We map to service STOP.
+                    sendTimerCommand(TimerServiceContract.ACTION_STOP)
                 } else {
                     binding.root.showSnackbar("Stop the current timer first.")
                 }
@@ -269,9 +240,8 @@ class PathFragment : Fragment() {
             android.Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
 
-        if (granted) {
-            startTimerService(actionId)
-        } else {
+        if (granted) startTimerService(actionId)
+        else {
             pendingStartActionId = actionId
             requestPostNotifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
         }
@@ -296,18 +266,15 @@ class PathFragment : Fragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Archive action?")
             .setMessage("This will hide the action from your active list.")
-            .setPositiveButton("Archive") { _, _ ->
-                viewModel.archiveAction(action.id)
-            }
+            .setPositiveButton("Archive") { _, _ -> viewModel.archiveAction(action.id) }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
     /**
-     * Action create/edit dialog.
-     *
-     * IMPORTANT FIX:
-     * Your layout uses `actvCadence` and `actvGoalLink`, not `actCadence/actGoal`.
+     * Uses your actual binding ids:
+     * - actvCadence
+     * - actvGoalLink
      */
     private fun showEditActionDialog(existing: Action?) {
         viewLifecycleOwner.lifecycleScope.launch {
@@ -319,26 +286,22 @@ class PathFragment : Fragment() {
             dialogBinding.etTitle.setText(existing?.title.orEmpty())
             dialogBinding.etTargetMinutes.setText(existing?.targetValue?.toString().orEmpty())
 
-            // ✅ Correct binding id: actvCadence
-            val cadenceOptions = listOf(
-                CadenceLabels.DAILY,
-                CadenceLabels.WEEKLY,
-                CadenceLabels.ONE_TIME
+            val cadenceOptions = listOf(CadenceLabels.DAILY, CadenceLabels.WEEKLY, CadenceLabels.ONE_TIME)
+            dialogBinding.actvCadence.setAdapter(
+                ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, cadenceOptions)
             )
-            val cadenceAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, cadenceOptions)
-            dialogBinding.actvCadence.setAdapter(cadenceAdapter)
 
-            val initialCadenceLabel = when (existing?.cadence ?: ActionCadence.DAILY) {
+            val initialCadence = when (existing?.cadence ?: ActionCadence.DAILY) {
                 ActionCadence.DAILY -> CadenceLabels.DAILY
                 ActionCadence.WEEKLY -> CadenceLabels.WEEKLY
                 ActionCadence.ONE_TIME -> CadenceLabels.ONE_TIME
             }
-            dialogBinding.actvCadence.setText(initialCadenceLabel, false)
+            dialogBinding.actvCadence.setText(initialCadence, false)
 
-            // ✅ Correct binding id: actvGoalLink
             val goalTitles = viewModel.activeGoals.value.map { it.title }
-            val goalAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, goalTitles)
-            dialogBinding.actvGoalLink.setAdapter(goalAdapter)
+            dialogBinding.actvGoalLink.setAdapter(
+                ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, goalTitles)
+            )
 
             linkedGoalId?.let { id ->
                 val idx = viewModel.activeGoals.value.indexOfFirst { it.id == id }
@@ -357,9 +320,7 @@ class PathFragment : Fragment() {
                         if (title.isBlank()) {
                             dialogBinding.tilTitle.error = "Title is required"
                             return@setOnClickListener
-                        } else {
-                            dialogBinding.tilTitle.error = null
-                        }
+                        } else dialogBinding.tilTitle.error = null
 
                         val cadence = when (dialogBinding.actvCadence.text?.toString()?.trim()) {
                             CadenceLabels.WEEKLY -> ActionCadence.WEEKLY
@@ -374,9 +335,7 @@ class PathFragment : Fragment() {
                             ?.takeIf { it > 0 }
 
                         val selectedGoalTitle = dialogBinding.actvGoalLink.text?.toString()?.trim().orEmpty()
-                        val selectedGoalId = viewModel.activeGoals.value
-                            .firstOrNull { it.title == selectedGoalTitle }
-                            ?.id
+                        val selectedGoalId = viewModel.activeGoals.value.firstOrNull { it.title == selectedGoalTitle }?.id
 
                         viewModel.saveAction(
                             existingId = existing?.id,

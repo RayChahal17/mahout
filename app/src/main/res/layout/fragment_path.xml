@@ -5,56 +5,141 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Top title -->
     <TextView
-        android:id="@+id/tvTopTitle"
+        android:id="@+id/tvPathTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/screen_padding"
         android:layout_marginTop="@dimen/spacing_16"
-        android:text="@string/tab_path"
-        android:textAppearance="@style/TextAppearance.Mahout.Title"
+        android:text="Path"
+        android:textStyle="bold"
+        android:textSize="22sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"/>
 
-    <!-- Add Action button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnAddAction"
         style="?attr/materialButtonOutlinedStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="@dimen/screen_padding"
-        android:text="@string/path_add_action"
+        android:text="+ Add"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/tvTopTitle"/>
+        app:layout_constraintTop_toTopOf="@id/tvPathTitle"/>
 
-    <!-- ✅ NEW: Fixed timer card (not scrollable) -->
-    <include
-        android:id="@+id/timerCard"
-        layout="@layout/view_path_timer_card"
+    <TextView
+        android:id="@+id/tvTimelineTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/spacing_16"
+        android:text="Timeline"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvPathTitle"/>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardTimeline"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/screen_padding"
         android:layout_marginEnd="@dimen/screen_padding"
-        app:layout_constraintTop_toBottomOf="@id/tvTopTitle"
+        android:layout_marginTop="@dimen/spacing_12"
+        app:cardUseCompatPadding="true"
+        app:cardElevation="4dp"
+        app:cardCornerRadius="24dp"
+        app:layout_constraintTop_toBottomOf="@id/tvTimelineTitle"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <!-- RecyclerView remains the ONLY scrollable area -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/spacing_16">
+
+            <TextView
+                android:id="@+id/tvTimelinePlaceholder"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Timeline coming soon (Day X). This is the design shell."
+                android:textSize="14sp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"/>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/toggleMode"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginEnd="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/spacing_16"
+        app:singleSelection="true"
+        app:selectionRequired="true"
+        app:layout_constraintTop_toBottomOf="@id/cardTimeline"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnModeActions"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Actions"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnModeChecklist"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Checklist"/>
+
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+    <TextView
+        android:id="@+id/tvTodaysActionsTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/spacing_16"
+        android:text="Today’s actions"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toggleMode"/>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvActions"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="@dimen/spacing_16"
         android:layout_marginStart="@dimen/screen_padding"
         android:layout_marginEnd="@dimen/screen_padding"
-        android:overScrollMode="never"
-        app:layout_constraintTop_toBottomOf="@id/timerCard"
+        android:layout_marginTop="@dimen/spacing_12"
+        android:clipToPadding="false"
+        android:paddingBottom="140dp"
+        app:layout_constraintTop_toBottomOf="@id/tvTodaysActionsTitle"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Empty state include -->
+    <TextView
+        android:id="@+id/tvChecklistPlaceholder"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginEnd="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/spacing_16"
+        android:text="Checklist view coming soon."
+        android:visibility="gone"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/tvTodaysActionsTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
     <include
         android:id="@+id/emptyState"
         layout="@layout/view_empty_state"
@@ -63,9 +148,19 @@
         android:layout_height="0dp"
         android:layout_marginStart="@dimen/screen_padding"
         android:layout_marginEnd="@dimen/screen_padding"
-        app:layout_constraintTop_toBottomOf="@id/timerCard"
+        app:layout_constraintTop_toBottomOf="@id/tvTodaysActionsTitle"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
+
+    <include
+        android:id="@+id/timerTray"
+        layout="@layout/view_timer_tray"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
