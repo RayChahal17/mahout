@@ -1,4 +1,4 @@
-package com.mahout.app.ui.path
+package com.mahout.app.ui.path.timer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,10 +10,14 @@ import com.mahout.app.domain.aim.usecase.ObserveActiveGoalsUseCase
 import com.mahout.app.domain.aim.usecase.SetGoalForActionUseCase
 import com.mahout.app.domain.path.model.Action
 import com.mahout.app.domain.path.model.ActionCadence
+import com.mahout.app.domain.path.model.ActionStatus
 import com.mahout.app.domain.path.model.ActionTrackingType
+import com.mahout.app.domain.path.model.TimerState
 import com.mahout.app.domain.path.usecase.ArchiveActionUseCase
 import com.mahout.app.domain.path.usecase.ObserveActiveActionsUseCase
+import com.mahout.app.domain.path.usecase.ObserveTimerStateUseCase // ✅ IMPORTANT: no ".timer" here
 import com.mahout.app.domain.path.usecase.UpsertActionUseCase
+import com.mahout.app.ui.path.PathEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,20 +28,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * Day 12 ViewModel responsibilities:
- * - Observe active actions for the list
- * - Provide active goals snapshot for the "link to goal" dropdown
- * - Save Action (upsert) + optionally set goal link
- * - Archive Action
- *
- * IMPORTANT:
- * We keep this separate from Aim (Day 11) so we don’t risk breaking working code.
- */
 @HiltViewModel
 class PathViewModel @Inject constructor(
     observeActiveActionsUseCase: ObserveActiveActionsUseCase,
     observeActiveGoalsUseCase: ObserveActiveGoalsUseCase,
+    observeTimerStateUseCase: ObserveTimerStateUseCase,
     private val upsertActionUseCase: UpsertActionUseCase,
     private val archiveActionUseCase: ArchiveActionUseCase,
     private val setGoalForActionUseCase: SetGoalForActionUseCase,
@@ -49,25 +44,28 @@ class PathViewModel @Inject constructor(
     private val _events = MutableSharedFlow<PathEvent>(extraBufferCapacity = 1)
     val events = _events.asSharedFlow()
 
-    /**
-     * Active actions list for the Path screen.
-     */
     val actions: StateFlow<List<Action>> =
         observeActiveActionsUseCase()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /**
-     * CRITICAL FIX:
-     * Make goals eager so they load even if nobody is "collecting" them.
-     * The dialog reads activeGoals.value for dropdown content.
-     */
     val activeGoals: StateFlow<List<Goal>> =
         observeActiveGoalsUseCase()
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /**
-     * Prefill helper for edit dialog:
-     * Return current linked goalId (if any) so the dropdown shows the right selection.
+     * Timer state (STOPPED / RUNNING / PAUSED) observed from Room.
+     */
+    val timerState: StateFlow<TimerState> =
+        observeTimerStateUseCase()
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5_000),
+                TimerState.stopped(timeProvider.nowInstant())
+            )
+
+    /**
+     * Used by the Action dialog to pre-fill the goal link.
+     * We fetch BEFORE building the dialog UI to avoid wiping link on Save.
      */
     suspend fun getLinkedGoalId(actionId: String): String? {
         return actionGoalLinkRepository.observeGoalForAction(actionId)
@@ -78,66 +76,44 @@ class PathViewModel @Inject constructor(
     fun archiveAction(actionId: String) {
         viewModelScope.launch {
             runCatching { archiveActionUseCase(actionId) }
-                .onSuccess { _events.tryEmit(PathEvent.ShowSnackbar("Archived")) }
-                .onFailure { _events.tryEmit(PathEvent.ShowSnackbar("Could not archive. Try again.")) }
+                .onSuccess { _events.tryEmit(PathEvent.ShowSnackbar("Action archived")) }
+                .onFailure { _events.tryEmit(PathEvent.ShowSnackbar(it.message ?: "Failed to archive")) }
         }
     }
 
     /**
-     * Save = upsert Action + set (or clear) the goal link.
-     *
-     * Data rule:
-     * Linking/unlinking must NOT delete sessions.
-     * Our link table uses intervals; we only close/open link rows.
+     * Create or update an Action (TIME-only v1).
+     * Also sets/clears 0/1 goal link via SetGoalForActionUseCase.
      */
     fun saveAction(
-        existing: Action?,
+        existingId: String?,
         title: String,
         cadence: ActionCadence,
         targetMinutes: Int?,
         linkedGoalId: String?
     ) {
         viewModelScope.launch {
-            val now = timeProvider.nowInstant()
+            runCatching {
+                val now = timeProvider.nowInstant()
+                val actionId = existingId ?: idProvider.newId()
 
-            val actionToSave = if (existing == null) {
-                // New action
-                Action(
-                    id = idProvider.newId(),
+                val action = Action(
+                    id = actionId,
                     title = title,
-                    description = null, // required by domain model
-                    trackingType = ActionTrackingType.TIME, // V1 scope lock
+                    description = null,
                     cadence = cadence,
+                    trackingType = ActionTrackingType.TIME,
                     targetValue = targetMinutes,
-                    isArchived = false,
+                    status = ActionStatus.ACTIVE,
                     createdAt = now,
-                    updatedAt = now,
-                    archivedAt = null
-                )
-            } else {
-                // Edit existing; preserve fields we don’t edit today
-                existing.copy(
-                    title = title,
-                    cadence = cadence,
-                    targetValue = targetMinutes,
                     updatedAt = now
                 )
-            }
 
-            runCatching {
-                // 1) Persist action
-                upsertActionUseCase(actionToSave)
-
-                // 2) Persist link (or clear link if linkedGoalId == null)
-                setGoalForActionUseCase(
-                    actionId = actionToSave.id,
-                    goalId = linkedGoalId
-                )
-            }.onSuccess {
-                _events.tryEmit(PathEvent.ShowSnackbar("Saved"))
-            }.onFailure {
-                _events.tryEmit(PathEvent.ShowSnackbar("Could not save. Try again."))
+                upsertActionUseCase(action)
+                setGoalForActionUseCase(actionId, linkedGoalId)
             }
+                .onSuccess { _events.tryEmit(PathEvent.ShowSnackbar("Saved")) }
+                .onFailure { _events.tryEmit(PathEvent.ShowSnackbar(it.message ?: "Save failed")) }
         }
     }
 }
