@@ -4,11 +4,14 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -32,6 +35,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class PathFragment : Fragment() {
@@ -46,21 +50,24 @@ class PathFragment : Fragment() {
     private var isActionsMode: Boolean = true
 
     private var uiTickerJob: Job? = null
+
+    // Used only for notif permission request flow
     private var pendingStartActionId: String? = null
 
-    /**
-     * ✅ IMPORTANT FIX:
-     * We do NOT use `by lazy { ... adapter ... }` because referencing adapter inside its
-     * lazy initializer causes Kotlin recursive type inference errors.
-     */
+    // Day 13 totals: actionId -> total millis in cadence window
+    private var latestTotalsByActionId: Map<String, Long> = emptyMap()
+
     private lateinit var adapter: ActionListAdapter
 
     private val requestPostNotifications =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             val actionId = pendingStartActionId
             pendingStartActionId = null
-            if (granted && actionId != null) startTimerService(actionId)
-            else binding.root.showSnackbar("Notifications are required to show timer controls.")
+            if (granted && actionId != null) {
+                startTimerService(actionId)
+            } else {
+                binding.root.showSnackbar("Notifications are required to show timer controls.")
+            }
         }
 
     private object CadenceLabels {
@@ -81,15 +88,13 @@ class PathFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // ✅ Create adapter here (no recursion possible).
         adapter = ActionListAdapter(
             onActionClick = { action -> showEditActionDialog(existing = action) },
             onActionLongClick = { action -> confirmArchiveAction(action) },
             onActionTimerClick = { action -> onActionTimerClick(action) },
-            onToggleCardSize = { adapter.toggleCardSize() } // safe now
+            onToggleCardSize = { adapter.toggleCardSize() }
         )
 
-        // Grid: 2 columns for cards. Headers/messages span across both columns.
         val glm = GridLayoutManager(requireContext(), 2)
         glm.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
             override fun getSpanSize(position: Int): Int {
@@ -103,7 +108,6 @@ class PathFragment : Fragment() {
         binding.rvActions.layoutManager = glm
         binding.rvActions.adapter = adapter
 
-        // Toggle: Actions vs Checklist
         binding.toggleMode.check(binding.btnModeActions.id)
         isActionsMode = true
         renderMode()
@@ -155,6 +159,14 @@ class PathFragment : Fragment() {
                 }
 
                 launch {
+                    viewModel.totalsMillisByActionId.collect { map ->
+                        latestTotalsByActionId = map
+                        rebuildRows()
+                        latestTimerState?.let { renderTimerTray(it) }
+                    }
+                }
+
+                launch {
                     viewModel.events.collect { event ->
                         when (event) {
                             is PathEvent.ShowSnackbar -> binding.root.showSnackbar(event.message)
@@ -174,9 +186,6 @@ class PathFragment : Fragment() {
             return
         }
 
-        // Day 12 safe grouping:
-        // - Weekly cadence => "This week's actions"
-        // - Everything else => "Today's actions"
         val today = actions.filter { it.cadence != ActionCadence.WEEKLY }
         val week = actions.filter { it.cadence == ActionCadence.WEEKLY }
 
@@ -190,34 +199,38 @@ class PathFragment : Fragment() {
         else rows += week.map { action -> buildActionRow(action, timerState) }
 
         rows += PathRow.HeaderRow(title = "Archived actions", showSizeToggle = false)
-        // Day 12: we’re still observing only active actions => archived list placeholder.
-        rows += PathRow.MessageRow("Archived actions will appear here (Day 13).")
+        rows += PathRow.MessageRow("Archived actions will appear here (next).")
 
         adapter.submitList(rows)
     }
 
-    /**
-     * Day 12 progress rule (safe):
-     * - Only the currently running/paused action shows real progress (from TimerState).
-     * - Other actions show 0m until Day 13 where we sum sessions for today/week.
-     */
     private fun buildActionRow(action: Action, timerState: TimerState?): PathRow.ActionRow {
         val isActiveForThisAction =
             timerState != null &&
                     timerState.actionId == action.id &&
                     timerState.status != TimerStatus.STOPPED
 
-        val totalMillis = if (isActiveForThisAction) computeTimerTotalMillis(timerState) else 0L
-        val minutesDone = (totalMillis / 60_000L).toInt().coerceAtLeast(0)
+        // Day 13: show TRUE totals for every card
+        val persistedTotalMillis = latestTotalsByActionId[action.id] ?: 0L
+        val totalMillis = if (isActiveForThisAction && timerState != null) {
+            computeTimerTotalMillis(timerState)
+        } else {
+            persistedTotalMillis
+        }.coerceAtLeast(0L)
 
         val targetMinutes = action.targetValue ?: 0
-        val percent =
-            if (targetMinutes > 0) ((minutesDone * 100) / targetMinutes).coerceIn(0, 100)
-            else 0
+        val targetMs = if (targetMinutes > 0) TimeUnit.MINUTES.toMillis(targetMinutes.toLong()) else 0L
 
-        val progressLabel =
-            if (targetMinutes > 0) "${minutesDone}m / ${targetMinutes}m"
-            else "${minutesDone}m"
+        val isOverTarget = targetMs > 0L && totalMillis > targetMs
+
+        val percent =
+            if (targetMs > 0L) {
+                ((minOf(totalMillis, targetMs) * 100L) / targetMs).toInt().coerceIn(0, 100)
+            } else {
+                0
+            }
+
+        val progressLabel = buildProgressLabel(totalMillis, targetMs)
 
         val cadenceText = when (action.cadence) {
             ActionCadence.DAILY -> "Repeats daily"
@@ -226,10 +239,9 @@ class PathFragment : Fragment() {
         }
 
         val metaText =
-            if (targetMinutes > 0) "$cadenceText • Target ${targetMinutes}m"
+            if (targetMinutes > 0) "$cadenceText • Target ${formatTargetMinutes(targetMinutes)}"
             else cadenceText
 
-        // Button logic (safe behavior):
         val timerButtonText: String
         val timerEnabled: Boolean
 
@@ -252,7 +264,8 @@ class PathFragment : Fragment() {
             progressPercent = percent,
             progressLabel = progressLabel,
             timerButtonText = timerButtonText,
-            timerButtonEnabled = timerEnabled
+            timerButtonEnabled = timerEnabled,
+            isOverTarget = isOverTarget
         )
     }
 
@@ -270,7 +283,6 @@ class PathFragment : Fragment() {
         uiTickerJob = viewLifecycleOwner.lifecycleScope.launch {
             while (true) {
                 latestTimerState?.let { renderTimerTray(it) }
-                // Also rebuild list so the running card’s progress updates.
                 rebuildRows()
                 delay(1_000L)
             }
@@ -296,7 +308,26 @@ class PathFragment : Fragment() {
 
         tray.btnTrayStop.setOnClickListener { sendTimerCommand(TimerServiceContract.ACTION_STOP) }
 
+        when (state.status) {
+            TimerStatus.RUNNING -> {
+                tray.btnTrayPauseResume.text = "Pause"
+                tray.btnTrayPauseResume.setOnClickListener {
+                    sendTimerCommand(TimerServiceContract.ACTION_PAUSE)
+                }
+            }
+
+            TimerStatus.PAUSED -> {
+                tray.btnTrayPauseResume.text = "Resume"
+                tray.btnTrayPauseResume.setOnClickListener {
+                    sendTimerCommand(TimerServiceContract.ACTION_RESUME)
+                }
+            }
+
+            else -> Unit
+        }
+
         val totalMillis = computeTimerTotalMillis(state)
+
         val d = Duration.ofMillis(totalMillis)
         val hours = d.toHours()
         val minutes = (d.toMinutes() % 60)
@@ -308,26 +339,39 @@ class PathFragment : Fragment() {
             String.format("%02d:%02d", minutes, seconds)
         }
 
-        // Tray progress uses running action’s targetValue if available.
         val targetMinutes = state.actionId
             ?.let { id -> latestActions.firstOrNull { it.id == id }?.targetValue }
             ?: 0
 
-        val doneMinutes = (totalMillis / 60_000L).toInt().coerceAtLeast(0)
+        val targetMs = if (targetMinutes > 0) TimeUnit.MINUTES.toMillis(targetMinutes.toLong()) else 0L
 
         val pct =
-            if (targetMinutes > 0) ((doneMinutes * 100) / targetMinutes).coerceIn(0, 100)
-            else 0
+            if (targetMs > 0L) {
+                ((minOf(totalMillis, targetMs) * 100L) / targetMs).toInt().coerceIn(0, 100)
+            } else 0
 
         tray.pbTrayProgress.progress = pct
-        tray.tvTrayProgressLabel.text =
-            if (targetMinutes > 0) "${doneMinutes}m / ${targetMinutes}m" else "${doneMinutes}m"
+        tray.tvTrayProgressLabel.text = buildProgressLabel(totalMillis, targetMs)
     }
 
     private fun onActionTimerClick(action: Action) {
         val state = latestTimerState
+
+        // If notifications are disabled, starting the service will feel like "nothing happens".
+        val ctxApp = requireContext().applicationContext
+        val notificationsEnabled = NotificationManagerCompat.from(ctxApp).areNotificationsEnabled()
+        if (!notificationsEnabled) {
+            Log.w("PathFragment", "Notifications disabled; cannot show timer notification.")
+            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, ctxApp.packageName)
+            }
+            startActivity(intent)
+            return
+        }
+
         when (state?.status ?: TimerStatus.STOPPED) {
             TimerStatus.STOPPED -> ensureNotificationPermissionThenStart(action.id)
+
             TimerStatus.RUNNING, TimerStatus.PAUSED -> {
                 if (state?.actionId == action.id) {
                     sendTimerCommand(TimerServiceContract.ACTION_STOP)
@@ -349,7 +393,9 @@ class PathFragment : Fragment() {
             android.Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
 
-        if (granted) startTimerService(actionId) else {
+        if (granted) {
+            startTimerService(actionId)
+        } else {
             pendingStartActionId = actionId
             requestPostNotifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
         }
@@ -379,11 +425,6 @@ class PathFragment : Fragment() {
             .show()
     }
 
-    /**
-     * Dialog uses your real binding IDs:
-     * - actvCadence
-     * - actvGoalLink
-     */
     private fun showEditActionDialog(existing: Action?) {
         viewLifecycleOwner.lifecycleScope.launch {
             val linkedGoalId: String? = existing?.let { viewModel.getLinkedGoalId(it.id) }
@@ -459,5 +500,41 @@ class PathFragment : Fragment() {
                     }
                 }
         }
+    }
+
+    private fun buildProgressLabel(elapsedMs: Long, targetMs: Long): String {
+        val doneMin = (elapsedMs / 60_000L).toInt().coerceAtLeast(0)
+
+        if (targetMs <= 0L) return "${doneMin}m"
+
+        val targetMin = (targetMs / 60_000L).toInt().coerceAtLeast(0)
+        return if (elapsedMs < targetMs) {
+            "${doneMin}m / ${targetMin}m"
+        } else {
+            val over = (elapsedMs - targetMs).coerceAtLeast(0L)
+            if (over <= 0L) "${doneMin}m / ${targetMin}m"
+            else "${doneMin}m / ${targetMin}m (+${formatOverShort(over)})"
+        }
+    }
+
+    private fun formatOverShort(ms: Long): String {
+        val totalSeconds = TimeUnit.MILLISECONDS.toSeconds(ms.coerceAtLeast(0L))
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+
+        return when {
+            hours > 0 -> "${hours}h ${minutes}m ${seconds}s"
+            minutes > 0 -> "${minutes}m ${seconds}s"
+            else -> "${seconds}s"
+        }
+    }
+
+    private fun formatTargetMinutes(minutes: Int): String {
+        val m = minutes.coerceAtLeast(0)
+        if (m < 60) return "${m}m"
+        val h = m / 60
+        val rem = m % 60
+        return if (rem == 0) "${h}h" else "${h}h ${rem}m"
     }
 }
