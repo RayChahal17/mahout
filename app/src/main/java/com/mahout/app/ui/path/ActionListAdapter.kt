@@ -1,27 +1,17 @@
 package com.mahout.app.ui.path
 
+import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.color.MaterialColors
 import com.mahout.app.databinding.ItemActionBinding
 import com.mahout.app.databinding.ItemSectionHeaderBinding
 import com.mahout.app.domain.path.model.Action
 
-/**
- * Sectioned adapter for Path Actions screen.
- *
- * Rows:
- * - HeaderRow (spans full width in GridLayoutManager via SpanSizeLookup)
- * - ActionRow (grid card)
- * - MessageRow (spans full width)
- *
- * Day 12/13-safe:
- * - We do NOT compute session totals here.
- * - Fragment computes progress + button state and passes them in PathRow.ActionRow.
- */
 class ActionListAdapter(
     private val onActionClick: (Action) -> Unit,
     private val onActionLongClick: (Action) -> Unit,
@@ -29,19 +19,9 @@ class ActionListAdapter(
     private val onToggleCardSize: () -> Unit
 ) : ListAdapter<PathRow, RecyclerView.ViewHolder>(Diff) {
 
-    /**
-     * Controls whether cards show full details (meta/progress)
-     * or just title + Start/Stop.
-     */
     enum class CardSize { COMPACT, EXPANDED }
-
-    // Default = expanded, like your design (more info visible).
     private var cardSize: CardSize = CardSize.EXPANDED
 
-    /**
-     * ✅ Called by PathFragment via: onToggleCardSize = { adapter.toggleCardSize() }
-     * This toggles the adapter's internal state and refreshes rows.
-     */
     fun toggleCardSize() {
         cardSize = if (cardSize == CardSize.EXPANDED) CardSize.COMPACT else CardSize.EXPANDED
         notifyDataSetChanged()
@@ -65,8 +45,6 @@ class ActionListAdapter(
             }
 
             VIEW_MESSAGE -> {
-                // Reuse the same header layout for a message row.
-                // We hide the toggle button.
                 val binding = ItemSectionHeaderBinding.inflate(inflater, parent, false)
                 MessageVH(binding)
             }
@@ -99,8 +77,6 @@ class ActionListAdapter(
 
         fun bind(row: PathRow.HeaderRow) {
             binding.tvHeaderTitle.text = row.title
-
-            // Only show the expand/compact icon where desired (usually "Today’s actions")
             binding.btnHeaderToggle.isVisible = row.showSizeToggle
             binding.btnHeaderToggle.setOnClickListener { onToggleCardSize() }
         }
@@ -127,26 +103,37 @@ class ActionListAdapter(
         fun bind(row: PathRow.ActionRow) {
             val action = row.action
 
-            // Basic content
             binding.tvActionTitle.text = action.title
             binding.tvActionMeta.text = row.metaText
 
-            // Progress UI (values already computed in Fragment)
             binding.pbProgress.max = 100
             binding.pbProgress.progress = row.progressPercent
             binding.tvProgressLabel.text = row.progressLabel
 
-            // Timer button UI (values already computed in Fragment)
+            val labelColorAttr = if (row.isOverTarget)
+                com.google.android.material.R.attr.colorSecondary
+            else
+                com.google.android.material.R.attr.colorOnSurface
+
+            binding.tvProgressLabel.setTextColor(MaterialColors.getColor(binding.root, labelColorAttr))
+
+            // ✅ Tint progress bar too
+            val barColorAttr = if (row.isOverTarget)
+                com.google.android.material.R.attr.colorSecondary
+            else
+                com.google.android.material.R.attr.colorSecondary
+
+            val barColor = MaterialColors.getColor(binding.root, barColorAttr)
+            binding.pbProgress.progressTintList = ColorStateList.valueOf(barColor)
+
             binding.btnTimer.text = row.timerButtonText
             binding.btnTimer.isEnabled = row.timerButtonEnabled
 
-            // ✅ Density toggle: compact hides meta + progress.
             val compact = (cardSizeProvider() == CardSize.COMPACT)
             binding.tvActionMeta.isVisible = !compact
             binding.pbProgress.isVisible = !compact
             binding.tvProgressLabel.isVisible = !compact
 
-            // Clicks
             binding.root.setOnClickListener { onClick(action) }
             binding.root.setOnLongClickListener {
                 onLongClick(action)
@@ -176,9 +163,6 @@ class ActionListAdapter(
     }
 }
 
-/**
- * List rows rendered by ActionListAdapter.
- */
 sealed class PathRow {
     data class HeaderRow(
         val title: String,
@@ -191,7 +175,8 @@ sealed class PathRow {
         val progressPercent: Int,
         val progressLabel: String,
         val timerButtonText: String,
-        val timerButtonEnabled: Boolean
+        val timerButtonEnabled: Boolean,
+        val isOverTarget: Boolean
     ) : PathRow()
 
     data class MessageRow(

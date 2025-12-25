@@ -6,6 +6,7 @@
 
     <!-- Required to run a ForegroundService (reliable timer). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- Android 14+ specific permission for the declared foreground service type. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />

@@ -1,6 +1,7 @@
 package com.mahout.app.ui.path.timer
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -45,7 +46,6 @@ class TimerForegroundService : android.app.Service() {
         private const val TAG = "TimerFGS"
         private const val START_GRACE_MS = 2000L
         private const val NOTIFICATION_TICK_MS = 1000L
-
         private const val TARGET_REACHED_NOTIFICATION_ID = 9911
     }
 
@@ -69,12 +69,16 @@ class TimerForegroundService : android.app.Service() {
     private var pendingStartActionId: String? = null
     private var pendingStartTimeoutJob: Job? = null
 
-    // ✅ Drives progress bar updates while RUNNING
+    // Drives progress bar updates while RUNNING
     private var notificationTickerJob: Job? = null
 
-    // ✅ Prevent congrats spam
+    // Prevent congrats spam (per-process lifetime)
     private var lastActionIdForCongrats: String? = null
     private var hasNotifiedTargetReached: Boolean = false
+
+    // Makes notification recover after process death (state exists, but metadata not loaded yet)
+    private var loadedMetaForActionId: String? = null
+    private var loadMetaJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -87,6 +91,9 @@ class TimerForegroundService : android.app.Service() {
             observeTimerStateUseCase().collectLatest { state ->
                 latestState = state
                 Log.d(TAG, "TimerState update: status=${state.status} actionId=${state.actionId}")
+
+                // Make sure we have title/target even after process death
+                state.actionId?.let { ensureActionMetaLoaded(it) }
 
                 // Reset congrats state when action changes or timer stops.
                 val currentActionId = state.actionId
@@ -106,6 +113,7 @@ class TimerForegroundService : android.app.Service() {
 
                         ensureForeground(state)
                         startNotificationTicker()
+                        // also check here (and in ticker)
                         maybeNotifyTargetReached(state)
                         postNotificationUpdate(state)
                     }
@@ -148,7 +156,10 @@ class TimerForegroundService : android.app.Service() {
                 val current = latestState
                 if (current != null && current.status != TimerStatus.STOPPED) {
                     Log.d(TAG, "TOGGLE -> stopTimerUseCase()")
-                    serviceScope.launch { runCatching { stopTimerUseCase() }.onFailure { Log.e(TAG, "stop failed", it) } }
+                    serviceScope.launch {
+                        runCatching { stopTimerUseCase() }
+                            .onFailure { Log.e(TAG, "stop failed", it) }
+                    }
                     return START_STICKY
                 }
 
@@ -163,17 +174,26 @@ class TimerForegroundService : android.app.Service() {
 
             TimerServiceContract.ACTION_PAUSE -> {
                 Log.d(TAG, "PAUSE")
-                serviceScope.launch { runCatching { pauseTimerUseCase() }.onFailure { Log.e(TAG, "pause failed", it) } }
+                serviceScope.launch {
+                    runCatching { pauseTimerUseCase() }
+                        .onFailure { Log.e(TAG, "pause failed", it) }
+                }
             }
 
             TimerServiceContract.ACTION_RESUME -> {
                 Log.d(TAG, "RESUME")
-                serviceScope.launch { runCatching { resumeTimerUseCase() }.onFailure { Log.e(TAG, "resume failed", it) } }
+                serviceScope.launch {
+                    runCatching { resumeTimerUseCase() }
+                        .onFailure { Log.e(TAG, "resume failed", it) }
+                }
             }
 
             TimerServiceContract.ACTION_STOP -> {
                 Log.d(TAG, "STOP")
-                serviceScope.launch { runCatching { stopTimerUseCase() }.onFailure { Log.e(TAG, "stop failed", it) } }
+                serviceScope.launch {
+                    runCatching { stopTimerUseCase() }
+                        .onFailure { Log.e(TAG, "stop failed", it) }
+                }
             }
 
             TimerServiceContract.ACTION_START -> {
@@ -222,12 +242,11 @@ class TimerForegroundService : android.app.Service() {
         ensureForeground(placeholder)
         postNotificationUpdate(placeholder)
 
+        // Load action metadata early (title/target for progress)
+        ensureActionMetaLoaded(actionId, force = true)
+
         serviceScope.launch {
             try {
-                val action = withContext(Dispatchers.IO) { actionRepository.getAction(actionId) }
-                latestActionTitle = action?.title
-                latestTargetMinutes = action?.targetValue?.toInt()
-
                 Log.d(TAG, "Calling startTimerUseCase(actionId=$actionId)")
                 startTimerUseCase(actionId)
                 Log.d(TAG, "startTimerUseCase returned normally")
@@ -237,9 +256,29 @@ class TimerForegroundService : android.app.Service() {
         }
     }
 
+    private fun ensureActionMetaLoaded(actionId: String, force: Boolean = false) {
+        if (!force && loadedMetaForActionId == actionId && (latestActionTitle != null || latestTargetMinutes != null)) return
+        if (loadMetaJob?.isActive == true) return
+
+        loadMetaJob = serviceScope.launch {
+            try {
+                val action = withContext(Dispatchers.IO) { actionRepository.getAction(actionId) }
+                latestActionTitle = action?.title
+                latestTargetMinutes = action?.targetValue?.toInt()
+                loadedMetaForActionId = actionId
+                // Push an update so progress bar appears ASAP after metadata arrives
+                latestState?.let { postNotificationUpdate(it) }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Failed to load action meta for $actionId", t)
+            }
+        }
+    }
+
     /**
-     * ✅ Notification progress bar needs explicit notify() calls to animate.
+     * Notification progress bar needs explicit notify() calls to animate.
      * We run a lightweight ticker only while RUNNING.
+     *
+     * Also: congrats needs to be checked while time passes (state may not emit).
      */
     private fun startNotificationTicker() {
         if (notificationTickerJob?.isActive == true) return
@@ -250,6 +289,7 @@ class TimerForegroundService : android.app.Service() {
                 val s = latestState ?: continue
                 if (s.status != TimerStatus.RUNNING) break
                 postNotificationUpdate(s)
+                maybeNotifyTargetReached(s)
             }
         }
     }
@@ -279,7 +319,7 @@ class TimerForegroundService : android.app.Service() {
     }
 
     private fun showTargetReachedNotification(title: String, overMs: Long) {
-        if (!canPostNotifications()) return
+        if (!canPostNotificationsInline()) return
 
         val openAppIntent = Intent(this, MainActivity::class.java)
         val openAppPendingIntent = PendingIntent.getActivity(
@@ -372,7 +412,6 @@ class TimerForegroundService : android.app.Service() {
             isInForeground = true
             Log.d(TAG, "Entered foreground")
         } catch (se: SecurityException) {
-            // If notifications are blocked (Android 13+), posting can throw.
             Log.e(TAG, "startForeground failed (notifications blocked?)", se)
             stopSelf()
         } catch (t: Throwable) {
@@ -382,9 +421,11 @@ class TimerForegroundService : android.app.Service() {
     }
 
     /**
-     * IMPORTANT:
      * For targetSdk 34+ (you’re on 36), you must specify a foreground service TYPE.
-     * Also ensure your Manifest service has android:foregroundServiceType="dataSync".
+     * Ensure Manifest service has android:foregroundServiceType="dataSync"
+     * and you have permissions:
+     * - android.permission.FOREGROUND_SERVICE
+     * - android.permission.FOREGROUND_SERVICE_DATA_SYNC
      */
     private fun startForegroundCompat(notification: Notification) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -400,7 +441,7 @@ class TimerForegroundService : android.app.Service() {
     }
 
     private fun postNotificationUpdate(state: TimerState) {
-        if (!canPostNotifications()) return
+        if (!canPostNotificationsInline()) return
 
         val notification = notificationFactory.build(
             state = state,
@@ -411,11 +452,12 @@ class TimerForegroundService : android.app.Service() {
         safeNotify(TimerServiceContract.NOTIFICATION_ID, notification)
     }
 
+    @SuppressLint("MissingPermission") // we check permission inline before notify()
     private fun safeNotify(id: Int, notification: Notification) {
+        if (!canPostNotificationsInline()) return
         try {
             NotificationManagerCompat.from(this).notify(id, notification)
         } catch (se: SecurityException) {
-            // This is what Lint is warning about.
             Log.e(TAG, "notify() SecurityException (POST_NOTIFICATIONS denied?)", se)
         } catch (t: Throwable) {
             Log.e(TAG, "notify() failed", t)
@@ -423,13 +465,11 @@ class TimerForegroundService : android.app.Service() {
     }
 
     /**
-     * ✅ Removes Lint pain + avoids runtime crashes on Android 13+.
+     * Inline check so Lint is happy (it doesn't trust helper methods).
      */
-    private fun canPostNotifications(): Boolean {
-        // If the user disabled notifications in settings, this returns false.
+    private fun canPostNotificationsInline(): Boolean {
         if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) return false
 
-        // Android 13+ runtime permission
         return if (Build.VERSION.SDK_INT >= 33) {
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
                     PackageManager.PERMISSION_GRANTED

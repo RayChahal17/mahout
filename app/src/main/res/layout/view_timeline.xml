@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <!-- Header row inside the card -->
+    <ImageButton
+        android:id="@+id/btnLogTime"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:background="@drawable/bg_timeline_icon_button"
+        android:contentDescription="Log time"
+        android:src="@drawable/ic_add_24"
+        app:tint="?attr/colorOnSurface"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="14dp"/>
+
+    <TextView
+        android:id="@+id/tvLogTimeLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Log time"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toEndOf="@id/btnLogTime"
+        app:layout_constraintTop_toTopOf="@id/btnLogTime"
+        app:layout_constraintBottom_toBottomOf="@id/btnLogTime"
+        android:layout_marginStart="12dp"/>
+
+    <TextView
+        android:id="@+id/tvTimelineDate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Wed. Dec 24"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toEndOf="@id/tvLogTimeLabel"
+        app:layout_constraintTop_toTopOf="@id/btnLogTime"
+        app:layout_constraintBottom_toBottomOf="@id/btnLogTime"
+        android:layout_marginStart="12dp"/>
+
+    <ImageButton
+        android:id="@+id/btnTimelineStats"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:background="@drawable/bg_timeline_icon_button"
+        android:contentDescription="Stats"
+        android:src="@drawable/ic_timeline_bars_24"
+        app:tint="?attr/colorOnSurface"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/btnLogTime"
+        android:layout_marginEnd="14dp"/>
+
+    <!-- Appears when not on today (or followToday=false) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnBackToToday"
+        style="?attr/materialButtonOutlinedStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:text="Back to today"
+        android:visibility="gone"
+        app:cornerRadius="18dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        app:layout_constraintTop_toBottomOf="@id/btnLogTime"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp"/>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/timelineScroll"
+        android:layout_width="0dp"
+        android:layout_height="360dp"
+        android:fillViewport="false"
+        android:overScrollMode="always"
+        app:layout_constraintTop_toBottomOf="@id/btnBackToToday"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="12dp">
+
+        <com.mahout.app.ui.path.timeline.DayTimelineView
+            android:id="@+id/dayTimelineView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"/>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

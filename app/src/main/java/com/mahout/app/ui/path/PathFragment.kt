@@ -21,7 +21,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.timepicker.MaterialTimePicker
+import com.google.android.material.timepicker.TimeFormat
 import com.mahout.app.databinding.DialogEditActionBinding
+import com.mahout.app.databinding.DialogLogTimeBinding
 import com.mahout.app.databinding.FragmentPathBinding
 import com.mahout.app.domain.path.model.Action
 import com.mahout.app.domain.path.model.ActionCadence
@@ -30,11 +33,17 @@ import com.mahout.app.domain.path.model.TimerStatus
 import com.mahout.app.ui.common.showSnackbar
 import com.mahout.app.ui.path.timer.TimerForegroundService
 import com.mahout.app.ui.path.timer.TimerServiceContract
+import com.mahout.app.ui.path.timeline.TimelineView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Duration
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
@@ -57,6 +66,11 @@ class PathFragment : Fragment() {
     // Day 13 totals: actionId -> total millis in cadence window
     private var latestTotalsByActionId: Map<String, Long> = emptyMap()
 
+    // Timeline cache
+    private var latestTimelineDate: LocalDate = LocalDate.now(ZoneId.systemDefault())
+    private var latestTimelineBlocks = emptyList<com.mahout.app.ui.path.timeline.TimelineBlock>()
+    private var latestFollowToday: Boolean = true
+
     private lateinit var adapter: ActionListAdapter
 
     private val requestPostNotifications =
@@ -76,6 +90,8 @@ class PathFragment : Fragment() {
         const val ONE_TIME = "One-time"
     }
 
+    private val timeFmt = DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -85,8 +101,33 @@ class PathFragment : Fragment() {
         return binding.root
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Fixes "left open overnight" issue without breaking back-in-time browsing:
+        binding.timelineView.onHostResumed()
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Timeline wiring (NO TimelineScrollView anywhere)
+        binding.timelineView.setListener(object : TimelineView.Listener {
+            override fun onRequestDate(date: LocalDate) {
+                viewModel.requestTimelineDate(date)
+            }
+
+            override fun onBackToToday() {
+                viewModel.backToToday()
+            }
+
+            override fun onLogTime(date: LocalDate) {
+                showLogTimeDialog(date)
+            }
+
+            override fun onStats(date: LocalDate) {
+                binding.root.showSnackbar("Stats coming soon.")
+            }
+        })
 
         adapter = ActionListAdapter(
             onActionClick = { action -> showEditActionDialog(existing = action) },
@@ -153,7 +194,6 @@ class PathFragment : Fragment() {
                         latestTimerState = state
                         rebuildRows()
                         renderTimerTray(state)
-
                         if (state.status == TimerStatus.RUNNING) startUiTicker() else stopUiTicker()
                     }
                 }
@@ -166,6 +206,26 @@ class PathFragment : Fragment() {
                     }
                 }
 
+                // Timeline collectors
+                launch {
+                    viewModel.timelineDate.collect { d ->
+                        latestTimelineDate = d
+                        renderTimeline()
+                    }
+                }
+                launch {
+                    viewModel.timelineBlocks.collect { blocks ->
+                        latestTimelineBlocks = blocks
+                        renderTimeline()
+                    }
+                }
+                launch {
+                    viewModel.followToday.collect { follow ->
+                        latestFollowToday = follow
+                        renderTimeline()
+                    }
+                }
+
                 launch {
                     viewModel.events.collect { event ->
                         when (event) {
@@ -175,6 +235,14 @@ class PathFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun renderTimeline() {
+        binding.timelineView.submit(
+            date = latestTimelineDate,
+            blocks = latestTimelineBlocks,
+            followToday = latestFollowToday
+        )
     }
 
     private fun rebuildRows() {
@@ -210,7 +278,6 @@ class PathFragment : Fragment() {
                     timerState.actionId == action.id &&
                     timerState.status != TimerStatus.STOPPED
 
-        // Day 13: show TRUE totals for every card
         val persistedTotalMillis = latestTotalsByActionId[action.id] ?: 0L
         val totalMillis = if (isActiveForThisAction && timerState != null) {
             computeTimerTotalMillis(timerState)
@@ -274,7 +341,6 @@ class PathFragment : Fragment() {
             val now = System.currentTimeMillis()
             (now - state.updatedAt.toEpochMilli()).coerceAtLeast(0L)
         } else 0L
-
         return (state.accumulatedMillis + runningExtra).coerceAtLeast(0L)
     }
 
@@ -357,7 +423,6 @@ class PathFragment : Fragment() {
     private fun onActionTimerClick(action: Action) {
         val state = latestTimerState
 
-        // If notifications are disabled, starting the service will feel like "nothing happens".
         val ctxApp = requireContext().applicationContext
         val notificationsEnabled = NotificationManagerCompat.from(ctxApp).areNotificationsEnabled()
         if (!notificationsEnabled) {
@@ -502,11 +567,133 @@ class PathFragment : Fragment() {
         }
     }
 
+    private fun showLogTimeDialog(date: LocalDate) {
+        val dialogBinding = DialogLogTimeBinding.inflate(layoutInflater)
+
+        val actions = latestActions
+        val titles = actions.map { it.title }
+        dialogBinding.actvAction.setAdapter(
+            ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, titles)
+        )
+
+        // default selection
+        if (titles.isNotEmpty()) dialogBinding.actvAction.setText(titles.first(), false)
+
+        // default times: now rounded down to 5 min, +10 min
+        val now = LocalTime.now()
+        val roundedStart = now.withMinute((now.minute / 5) * 5).withSecond(0).withNano(0)
+        var start = roundedStart
+        var end = start.plusMinutes(10)
+
+        fun renderButtons() {
+            dialogBinding.btnStartTime.text = "Start: ${timeFmt.format(start)}"
+            dialogBinding.btnEndTime.text = "End: ${timeFmt.format(end)}"
+        }
+        renderButtons()
+
+        fun pickTime(initial: LocalTime, onPicked: (LocalTime) -> Unit) {
+            val picker = MaterialTimePicker.Builder()
+                .setTimeFormat(TimeFormat.CLOCK_12H)
+                .setHour(initial.hour)
+                .setMinute(initial.minute)
+                .setTitleText("Select time")
+                .build()
+
+            picker.addOnPositiveButtonClickListener {
+                onPicked(LocalTime.of(picker.hour, picker.minute))
+            }
+            picker.show(parentFragmentManager, "timePicker")
+        }
+
+        dialogBinding.btnStartTime.setOnClickListener {
+            pickTime(start) {
+                start = it
+                if (!end.isAfter(start)) end = start.plusMinutes(10)
+                renderButtons()
+            }
+        }
+
+        dialogBinding.btnEndTime.setOnClickListener {
+            pickTime(end) {
+                end = it
+                if (!end.isAfter(start)) end = start.plusMinutes(10)
+                renderButtons()
+            }
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Log time")
+            .setView(dialogBinding.root)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save", null)
+            .show()
+            .also { dialog ->
+                dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val selectedTitle = dialogBinding.actvAction.text?.toString()?.trim().orEmpty()
+                    val action = actions.firstOrNull { it.title == selectedTitle }
+
+                    if (action == null) {
+                        dialogBinding.tilAction.error = "Select an action"
+                        return@setOnClickListener
+                    } else {
+                        dialogBinding.tilAction.error = null
+                    }
+
+                    if (!end.isAfter(start)) {
+                        binding.root.showSnackbar("End must be after start.")
+                        return@setOnClickListener
+                    }
+
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        val conflicts = viewModel.getManualLogConflicts(date, start, end)
+                        if (conflicts.isEmpty()) {
+                            viewModel.logManualTime(
+                                date = date,
+                                actionId = action.id,
+                                title = action.title,
+                                start = start,
+                                end = end,
+                                strategy = PathViewModel.LogTimeStrategy.OVERWRITE
+                            )
+                            dialog.dismiss()
+                            return@launch
+                        }
+
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle("Time overlaps existing logs")
+                            .setMessage("Choose how to handle the overlap.")
+                            .setPositiveButton("Fit around") { _, _ ->
+                                viewModel.logManualTime(
+                                    date = date,
+                                    actionId = action.id,
+                                    title = action.title,
+                                    start = start,
+                                    end = end,
+                                    strategy = PathViewModel.LogTimeStrategy.FIT_AROUND
+                                )
+                                dialog.dismiss()
+                            }
+                            .setNegativeButton("Overwrite") { _, _ ->
+                                viewModel.logManualTime(
+                                    date = date,
+                                    actionId = action.id,
+                                    title = action.title,
+                                    start = start,
+                                    end = end,
+                                    strategy = PathViewModel.LogTimeStrategy.OVERWRITE
+                                )
+                                dialog.dismiss()
+                            }
+                            .setNeutralButton("Cancel", null)
+                            .show()
+                    }
+                }
+            }
+    }
+
     private fun buildProgressLabel(elapsedMs: Long, targetMs: Long): String {
         val doneMin = (elapsedMs / 60_000L).toInt().coerceAtLeast(0)
-
         if (targetMs <= 0L) return "${doneMin}m"
-
         val targetMin = (targetMs / 60_000L).toInt().coerceAtLeast(0)
         return if (elapsedMs < targetMs) {
             "${doneMin}m / ${targetMin}m"
@@ -522,7 +709,6 @@ class PathFragment : Fragment() {
         val hours = totalSeconds / 3600
         val minutes = (totalSeconds % 3600) / 60
         val seconds = totalSeconds % 60
-
         return when {
             hours > 0 -> "${hours}h ${minutes}m ${seconds}s"
             minutes > 0 -> "${minutes}m ${seconds}s"

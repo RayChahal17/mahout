@@ -1,24 +1,31 @@
 package com.mahout.app.ui.path.timer
 
 /**
- * Single source of truth for TimerForegroundService intent actions + extras.
- *
- * Why?
- * - Avoid typos across notification PendingIntents and UI code.
- * - Central place to change if we rename.
+ * Contract shared between:
+ * - UI (PathFragment)
+ * - Foreground service
+ * - Notification action buttons
  */
 object TimerServiceContract {
 
-    // Service actions (Intent.action)
-    const val ACTION_START = "com.mahout.app.timer.ACTION_START"
-    const val ACTION_PAUSE = "com.mahout.app.timer.ACTION_PAUSE"
-    const val ACTION_RESUME = "com.mahout.app.timer.ACTION_RESUME"
-    const val ACTION_STOP = "com.mahout.app.timer.ACTION_STOP"
+    // Service actions
+    const val ACTION_START = "com.mahout.app.timer.action.START"
+    const val ACTION_PAUSE = "com.mahout.app.timer.action.PAUSE"
+    const val ACTION_RESUME = "com.mahout.app.timer.action.RESUME"
+    const val ACTION_STOP = "com.mahout.app.timer.action.STOP"
 
-    // Intent extras
-    const val EXTRA_ACTION_ID = "extra_action_id"
+    /**
+     * ✅ New: UI can always send a single command:
+     * - If timer is stopped -> start for provided actionId
+     * - If timer is running/paused -> stop current timer
+     */
+    const val ACTION_TOGGLE = "com.mahout.app.timer.action.TOGGLE"
+
+    // Extras
+    const val EXTRA_ACTION_ID = "com.mahout.app.timer.extra.ACTION_ID"
 
     // Notification
-    const val NOTIFICATION_CHANNEL_ID = "path_timer"
+    const val NOTIFICATION_CHANNEL_ID = "mahout_timer"
+    const val NOTIFICATION_CHANNEL_NAME = "Timer"
     const val NOTIFICATION_ID = 1001
 }

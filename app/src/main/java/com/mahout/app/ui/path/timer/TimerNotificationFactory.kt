@@ -14,11 +14,9 @@ import java.util.concurrent.TimeUnit
 /**
  * Foreground timer notification builder.
  *
- * Why your "progress line" only changed on pause/start:
- * - Notification progress bars update ONLY when we post a new notification (notify()).
- * - Your TimerState flow emits only on state changes, not every second.
- *
- * Fix is in TimerForegroundService: a lightweight ticker calls notify() every second while RUNNING.
+ * Fixes:
+ * - Progress "line" visible immediately while RUNNING (never stuck at 0 for big targets).
+ * - Smooth progress updates (second-based instead of coarse 0..1000 slices).
  */
 class TimerNotificationFactory(
     private val context: Context
@@ -42,37 +40,41 @@ class TimerNotificationFactory(
 
         val targetMin = (targetMinutes ?: 0).coerceAtLeast(0)
         val targetMs = if (targetMin > 0) TimeUnit.MINUTES.toMillis(targetMin.toLong()) else 0L
-
         val contentText = buildProgressText(elapsedMs, targetMs)
 
         val builder = NotificationCompat.Builder(context, TimerServiceContract.NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher) // always exists
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setContentTitle(title)
             .setContentText(contentText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setContentIntent(openAppPendingIntent)
             .setOngoing(state.status != TimerStatus.STOPPED)
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
 
-        // ✅ Progress "line" (Notification progress bar)
-        // - Before target: grows from 0 -> 100%
-        // - After target: stays full, while we show (+extra) in text
-        if (targetMs > 0L) {
-            val max = 1000
-            val progress = ((elapsedMs.toDouble() / targetMs.toDouble()) * max)
-                .toInt()
-                .coerceIn(0, max)
-            builder.setProgress(max, progress, false)
+        // ✅ Progress bar
+        // Use SECONDS for smooth updates, and never be "0" while running so it's visible immediately.
+        if (targetMs > 0L && state.status != TimerStatus.STOPPED) {
+            val targetSec = (targetMs / 1000L).coerceAtLeast(1L)
+            val elapsedSec = (elapsedMs / 1000L).coerceAtLeast(0L)
+
+            val max = targetSec.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            val rawProgress = elapsedSec.coerceAtMost(targetSec).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+
+            val progress = when {
+                state.status == TimerStatus.RUNNING && rawProgress == 0 -> 1
+                else -> rawProgress
+            }
+
+            builder.setProgress(max, progress.coerceIn(0, max), false)
         } else {
-            // No target => no progress bar
             builder.setProgress(0, 0, false)
         }
 
         when (state.status) {
             TimerStatus.RUNNING -> {
-                // ✅ Chronometer ticks without notify() calls.
-                // We still call notify() periodically to update the progress bar.
                 builder
                     .setShowWhen(true)
                     .setWhen(System.currentTimeMillis() - elapsedMs)

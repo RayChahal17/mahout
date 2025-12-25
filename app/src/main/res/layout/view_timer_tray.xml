@@ -43,14 +43,24 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="@dimen/spacing_8"
+            android:maxLines="1"
+            android:ellipsize="end"
             android:text="Action"
             android:textStyle="bold"
             android:textSize="16sp"
-            android:maxLines="1"
-            android:ellipsize="end"
             app:layout_constraintStart_toEndOf="@id/tvTrayLabel"
-            app:layout_constraintEnd_toStartOf="@id/btnTrayStop"
+            app:layout_constraintEnd_toStartOf="@id/btnTrayPauseResume"
             app:layout_constraintTop_toTopOf="@id/tvTrayLabel"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTrayPauseResume"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="Pause"
+            app:layout_constraintEnd_toStartOf="@id/btnTrayStop"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginEnd="@dimen/spacing_8"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnTrayStop"

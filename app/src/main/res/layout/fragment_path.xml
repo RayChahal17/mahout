@@ -27,49 +27,35 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/tvPathTitle"/>
 
+    <!-- Premium "Timeline" pill title -->
     <TextView
-        android:id="@+id/tvTimelineTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:id="@+id/tvTimelinePill"
+        android:layout_width="0dp"
+        android:layout_height="44dp"
         android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginEnd="@dimen/screen_padding"
         android:layout_marginTop="@dimen/spacing_16"
+        android:background="@drawable/bg_section_pill"
+        android:gravity="center"
         android:text="Timeline"
         android:textStyle="bold"
         android:textSize="18sp"
+        android:textColor="?attr/colorOnSurface"
+        app:layout_constraintTop_toBottomOf="@id/tvPathTitle"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvPathTitle"/>
+        app:layout_constraintEnd_toEndOf="parent"/>
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cardTimeline"
+    <!-- Timeline card -->
+    <com.mahout.app.ui.path.timeline.TimelineView
+        android:id="@+id/timelineView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/screen_padding"
         android:layout_marginEnd="@dimen/screen_padding"
         android:layout_marginTop="@dimen/spacing_12"
-        app:cardUseCompatPadding="true"
-        app:cardElevation="4dp"
-        app:cardCornerRadius="24dp"
-        app:layout_constraintTop_toBottomOf="@id/tvTimelineTitle"
+        app:layout_constraintTop_toBottomOf="@id/tvTimelinePill"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="@dimen/spacing_16">
-
-            <TextView
-                android:id="@+id/tvTimelinePlaceholder"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:text="Timeline coming soon."
-                android:textSize="14sp"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"/>
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-    </com.google.android.material.card.MaterialCardView>
+        app:layout_constraintEnd_toEndOf="parent"/>
 
     <com.google.android.material.button.MaterialButtonToggleGroup
         android:id="@+id/toggleMode"
@@ -80,7 +66,7 @@
         android:layout_marginTop="@dimen/spacing_16"
         app:singleSelection="true"
         app:selectionRequired="true"
-        app:layout_constraintTop_toBottomOf="@id/cardTimeline"
+        app:layout_constraintTop_toBottomOf="@id/timelineView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
