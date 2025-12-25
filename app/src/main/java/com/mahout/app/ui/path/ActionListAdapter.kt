@@ -113,15 +113,15 @@ class ActionListAdapter(
             val labelColorAttr = if (row.isOverTarget)
                 com.google.android.material.R.attr.colorSecondary
             else
-                com.google.android.material.R.attr.colorOnSurface
+                com.google.android.material.R.attr.colorOnSurfaceVariant
 
             binding.tvProgressLabel.setTextColor(MaterialColors.getColor(binding.root, labelColorAttr))
 
-            // ✅ Tint progress bar too
+            // Tint progress bar (keep it neutral unless over target)
             val barColorAttr = if (row.isOverTarget)
                 com.google.android.material.R.attr.colorSecondary
             else
-                com.google.android.material.R.attr.colorSecondary
+                com.google.android.material.R.attr.colorOutline
 
             val barColor = MaterialColors.getColor(binding.root, barColorAttr)
             binding.pbProgress.progressTintList = ColorStateList.valueOf(barColor)

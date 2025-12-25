@@ -7,6 +7,7 @@ import android.graphics.RectF
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.view.View
+import com.google.android.material.color.MaterialColors
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -34,14 +35,20 @@ class DayTimelineView @JvmOverloads constructor(
     private fun dp(v: Float) = v * density
     private fun sp(v: Float) = v * resources.displayMetrics.scaledDensity
 
+    // Theme-derived colors (keeps the grid premium and not too contrasty).
+    private val outlineColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline)
+    private val onSurfaceVariantColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant)
+    private val onSurfaceColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface)
+
     // Layout metrics
     private val labelWidth = dp(46f)
     private val gridTopLabelHeight = dp(18f)
     private val topPadding = dp(10f)
     private val bottomPadding = dp(12f)
-    private val rowHeight = dp(56f)
 
+    private val rowHeight = dp(56f)
     private val colGap = dp(10f)
+
     private val pillHeight = dp(16f)
     private val pillRadius = dp(10f)
 
@@ -54,12 +61,14 @@ class DayTimelineView @JvmOverloads constructor(
     private val gridLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = dp(1f)
+        color = outlineColor
         alpha = 30
     }
 
     private val emptyPillStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = dp(1.2f)
+        color = outlineColor
         alpha = 60
     }
 
@@ -82,21 +91,25 @@ class DayTimelineView @JvmOverloads constructor(
 
     private val labelPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = sp(12f)
+        color = onSurfaceVariantColor
         alpha = 160
     }
 
     private val tinyTopLabelPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = sp(10f)
+        color = onSurfaceVariantColor
         alpha = 120
     }
 
     private val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = sp(11f)
+        color = onSurfaceColor
         alpha = 220
     }
 
     private val checkPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = sp(12f)
+        color = onSurfaceColor
         alpha = 230
     }
 
@@ -118,7 +131,6 @@ class DayTimelineView @JvmOverloads constructor(
     fun submit(date: LocalDate, blocks: List<TimelineBlock>) {
         this.date = date
         this.blocks = blocks
-        requestLayout()
         invalidate()
     }
 
@@ -150,6 +162,7 @@ class DayTimelineView @JvmOverloads constructor(
         super.onDraw(canvas)
 
         val gridTop = topPadding + gridTopLabelHeight
+
         drawTopMinuteLabels(canvas)
         drawVerticalGuides(canvas, gridTop)
 
@@ -160,7 +173,7 @@ class DayTimelineView @JvmOverloads constructor(
         // Draw background pill grid and hour labels
         for (row in 0 until rowsPerDay) {
             val rowTop = gridTop + row * rowHeight
-            drawHourLabel(canvas, row, rowTop, gridTop)
+            drawHourLabel(canvas, row, rowTop)
             drawRowGrid(canvas, row, rowTop, occupied)
         }
 
@@ -174,31 +187,25 @@ class DayTimelineView @JvmOverloads constructor(
     }
 
     private fun drawTopMinuteLabels(canvas: Canvas) {
-        // These are decorative labels to match the premium screenshot look.
         val y = topPadding + dp(12f)
         tinyTopLabelPaint.color = labelPaint.color
 
-        // Left edge label ":00"
         canvas.drawText(":00", gridLeft, y, tinyTopLabelPaint)
 
-        // Mid label ":30" (center of grid)
         val xMid = gridLeft + (gridWidth / 2f)
         canvas.drawText(":30", xMid - dp(10f), y, tinyTopLabelPaint)
     }
 
     private fun drawVerticalGuides(canvas: Canvas, gridTop: Float) {
-        // Subtle vertical lines: left edge, mid, right edge
         val y1 = gridTop
         val y2 = (topPadding + gridTopLabelHeight + rowsPerDay * rowHeight)
-
-        gridLinePaint.color = labelPaint.color
 
         canvas.drawLine(gridLeft, y1, gridLeft, y2, gridLinePaint)
         canvas.drawLine(gridLeft + gridWidth / 2f, y1, gridLeft + gridWidth / 2f, y2, gridLinePaint)
         canvas.drawLine(gridRight, y1, gridRight, y2, gridLinePaint)
     }
 
-    private fun drawHourLabel(canvas: Canvas, row: Int, rowTop: Float, gridTop: Float) {
+    private fun drawHourLabel(canvas: Canvas, row: Int, rowTop: Float) {
         // Draw hour label once per hour, centered across the two 30-min rows.
         if (row % 2 != 0) return
 
@@ -208,7 +215,7 @@ class DayTimelineView @JvmOverloads constructor(
 
         val yCenter = rowTop + rowHeight // center across the 2 rows
         val x = paddingLeft.toFloat()
-        labelPaint.color = titlePaint.color
+
         canvas.drawText(label, x, yCenter, labelPaint)
     }
 
@@ -227,9 +234,6 @@ class DayTimelineView @JvmOverloads constructor(
             val right = left + slotWidth
 
             tmpRect.set(left, pillTop, right, pillBottom)
-            emptyPillStroke.color = labelPaint.color
-            emptyPillFill.color = labelPaint.color
-
             canvas.drawRoundRect(tmpRect, pillRadius, pillRadius, emptyPillStroke)
         }
     }
@@ -238,9 +242,9 @@ class DayTimelineView @JvmOverloads constructor(
         for (b in blocks) {
             val startMin = (b.start.hour * 60 + b.start.minute).coerceIn(0, 24 * 60)
             val endMin = (b.end.hour * 60 + b.end.minute).coerceIn(0, 24 * 60)
+
             val s = min(startMin, endMin)
             val e = max(startMin, endMin)
-
             if (e <= s) continue
 
             val startSlot = s / minutesPerCol
@@ -249,8 +253,10 @@ class DayTimelineView @JvmOverloads constructor(
             for (slot in startSlot until endSlotExclusive) {
                 val row = (slot * minutesPerCol) / minutesPerRow
                 if (row !in 0 until rowsPerDay) continue
+
                 val withinRowMin = (slot * minutesPerCol) % minutesPerRow
                 val col = (withinRowMin / minutesPerCol).coerceIn(0, columns - 1)
+
                 val idx = row * columns + col
                 if (idx in occupied.indices) occupied[idx] = true
             }
@@ -258,15 +264,14 @@ class DayTimelineView @JvmOverloads constructor(
     }
 
     private fun drawBlocks(canvas: Canvas, gridTop: Float) {
-        // Sort by start time for consistent draw order
         val sorted = blocks.sortedBy { it.start }
 
         for (b in sorted) {
             val startMinRaw = (b.start.hour * 60 + b.start.minute).coerceIn(0, 24 * 60)
             val endMinRaw = (b.end.hour * 60 + b.end.minute).coerceIn(0, 24 * 60)
+
             val startMin = min(startMinRaw, endMinRaw)
             val endMin = max(startMinRaw, endMinRaw)
-
             if (endMin <= startMin) continue
 
             val durationMin = endMin - startMin
@@ -319,13 +324,20 @@ class DayTimelineView @JvmOverloads constructor(
                 if (row == startRow && showCheckAndTitle) {
                     val checkX = left + dp(10f)
                     val checkY = top + dp(13f)
+
                     checkPaint.color = b.color
                     canvas.drawText("✓", checkX, checkY, checkPaint)
 
                     val titleX = left + dp(10f)
                     val titleY = bottom + dp(14f)
+
                     titlePaint.color = b.color
-                    canvas.drawText(ellipsize(b.title, right - left - dp(20f), titlePaint), titleX, titleY, titlePaint)
+                    canvas.drawText(
+                        ellipsize(b.title, right - left - dp(20f), titlePaint),
+                        titleX,
+                        titleY,
+                        titlePaint
+                    )
                 }
             }
         }
