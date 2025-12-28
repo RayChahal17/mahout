@@ -20,9 +20,11 @@ import com.mahout.app.domain.path.usecase.ArchiveActionUseCase
 import com.mahout.app.domain.path.usecase.ObserveActiveActionsUseCase
 import com.mahout.app.domain.path.usecase.UpsertActionUseCase
 import com.mahout.app.domain.path.usecase.timer.ObserveTimerStateUseCase
+import com.mahout.app.ui.path.timeline.ActionColors
 import com.mahout.app.ui.path.timeline.TimelineBlock
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +32,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
@@ -87,31 +95,46 @@ class PathViewModel @Inject constructor(
     private val _followToday = MutableStateFlow(true)
     val followToday: StateFlow<Boolean> = _followToday.asStateFlow()
 
-    private val _timelineBlocks = MutableStateFlow<List<TimelineBlock>>(emptyList())
-    val timelineBlocks: StateFlow<List<TimelineBlock>> = _timelineBlocks.asStateFlow()
-
     enum class LogTimeStrategy { OVERWRITE, FIT_AROUND }
 
+    /**
+     * ✅ Ticker that drives "live" refresh.
+     * Important: this is cancellation-safe (no stale date blocks overwriting newer ones).
+     */
+    private val timelineTicker =
+        timerState
+            .map { it.status == TimerStatus.RUNNING }
+            .distinctUntilChanged()
+            .flatMapLatest { running ->
+                flow {
+                    while (currentCoroutineContext().isActive) {
+                        emit(Unit)
+                        // Timeline is 10-min slots; we don't need 1s refresh.
+                        delay(if (running) 5_000L else 30_000L)
+                    }
+                }
+            }
+
+    /**
+     * ✅ Timeline blocks are computed reactively + mapLatest cancels stale computations.
+     * This prevents "sometimes visible / wrong times / disappears then reappears" during scroll.
+     */
+    val timelineBlocks: StateFlow<List<TimelineBlock>> =
+        combine(_timelineDate, actions, timelineTicker) { date, list, _ -> date to list }
+            .mapLatest { (date, list) ->
+                if (list.isEmpty()) emptyList() else computeTimelineBlocks(date, list)
+            }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     init {
-        // Totals refresher (already in your Day 13)
+        // Totals refresher (your existing Day 13 logic)
         viewModelScope.launch {
             while (isActive) {
                 val list = actions.value
                 _totalsMillisByActionId.value = if (list.isEmpty()) emptyMap() else computeTotals(list)
 
                 val delayMs = if (timerState.value.status == TimerStatus.RUNNING) 1_000L else 15_000L
-                delay(delayMs)
-            }
-        }
-
-        // Timeline refresher (keeps UI “live” without wiring a bunch of DB observers)
-        viewModelScope.launch {
-            while (isActive) {
-                val list = actions.value
-                val date = _timelineDate.value
-                _timelineBlocks.value = if (list.isEmpty()) emptyList() else computeTimelineBlocks(date, list)
-
-                val delayMs = if (timerState.value.status == TimerStatus.RUNNING) 1_000L else 10_000L
                 delay(delayMs)
             }
         }
@@ -306,6 +329,12 @@ class PathViewModel @Inject constructor(
         return gaps
     }
 
+    /**
+     * ✅ FIXES INCLUDED:
+     * - Cancellation-safe publishing handled by mapLatest upstream
+     * - Rounds to minutes (no second jitter / “uncertain blocks”)
+     * - Keeps midnight end consistent (DayTimelineView will treat end=00:00 as day-end when appropriate)
+     */
     private suspend fun computeTimelineBlocks(date: LocalDate, actions: List<Action>): List<TimelineBlock> =
         withContext(Dispatchers.IO) {
 
@@ -317,8 +346,21 @@ class PathViewModel @Inject constructor(
             val queryTo = dayEnd.plusSeconds(1)
 
             val sessions = sessionRepository.getSessionsInRange(queryFrom, queryTo)
-
             val titleById = actions.associate { it.id to it.title }
+
+            // prime colors once per compute (stable)
+            ActionColors.prime(actions.map { it.id })
+
+            fun floorToMinute(i: Instant): LocalTime {
+                val t = i.atZone(zone).toLocalTime()
+                return t.withSecond(0).withNano(0)
+            }
+
+            fun ceilToMinute(i: Instant): LocalTime {
+                val t = i.atZone(zone).toLocalTime()
+                val flo = t.withSecond(0).withNano(0)
+                return if (t == flo) flo else flo.plusMinutes(1)
+            }
 
             // Clamp + map
             val rawBlocks = sessions.mapNotNull { s ->
@@ -330,8 +372,8 @@ class PathViewModel @Inject constructor(
                 if (!clampedEnd.isAfter(clampedStart)) return@mapNotNull null
 
                 val actionTitle = titleById[s.actionId] ?: "Action"
-                val startLocal = clampedStart.atZone(zone).toLocalTime()
-                val endLocal = clampedEnd.atZone(zone).toLocalTime()
+                val startLocal = floorToMinute(clampedStart)
+                val endLocal = ceilToMinute(clampedEnd)
 
                 TimelineBlock(
                     id = s.id,
@@ -339,11 +381,11 @@ class PathViewModel @Inject constructor(
                     title = actionTitle,
                     start = startLocal,
                     end = endLocal,
-                    color = colorForAction(s.actionId)
+                    color = ActionColors.forActionId(s.actionId)
                 )
             }
 
-            // Merge adjacent blocks of same action if they touch (nice premium look)
+            // Merge adjacent blocks of same action if they touch
             rawBlocks
                 .sortedWith(compareBy({ it.actionId }, { it.start }))
                 .groupBy { it.actionId }
@@ -364,22 +406,6 @@ class PathViewModel @Inject constructor(
                 }
                 .sortedBy { it.start }
         }
-
-    private fun colorForAction(actionId: String): Int {
-        // Stable “random” premium palette
-        val palette = intArrayOf(
-            0xFF4C8EA8.toInt(), // teal
-            0xFF6A5ACD.toInt(), // slate purple
-            0xFF2E7D32.toInt(), // green
-            0xFFB26A00.toInt(), // amber/brown
-            0xFF8E3B46.toInt(), // wine
-            0xFF1E5AA8.toInt(), // blue
-            0xFF7A3DB8.toInt(), // violet
-            0xFF00897B.toInt()  // teal dark
-        )
-        val idx = (actionId.hashCode().ushr(1)) % palette.size
-        return palette[idx]
-    }
 
     private suspend fun computeTotals(actions: List<Action>): Map<String, Long> = withContext(Dispatchers.IO) {
         val now = timeProvider.nowInstant()

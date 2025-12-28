@@ -13,6 +13,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
 
 class TimelineView @JvmOverloads constructor(
     context: Context,
@@ -21,16 +22,19 @@ class TimelineView @JvmOverloads constructor(
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
     interface Listener {
-        fun onRequestDate(date: LocalDate)          // user browses to another day
-        fun onBackToToday()                         // user taps "Today"/"Back to today"
-        fun onLogTime(date: LocalDate)              // plus button
-        fun onStats(date: LocalDate)                // bars button (future)
+        fun onRequestDate(date: LocalDate)
+        fun onBackToToday()
+        fun onLogTime(date: LocalDate)
+        fun onStats(date: LocalDate)
     }
 
-    private val binding = ViewTimelineBinding.inflate(LayoutInflater.from(context), this, true)
+    private val binding: ViewTimelineBinding =
+        ViewTimelineBinding.inflate(LayoutInflater.from(context), this, true)
+
     private var listener: Listener? = null
 
-    private var displayedDate: LocalDate = LocalDate.now(ZoneId.systemDefault())
+    private val zone = ZoneId.systemDefault()
+    private var displayedDate: LocalDate = LocalDate.now(zone)
     private var followToday: Boolean = true
 
     private val dateFormatter = DateTimeFormatter.ofPattern("EEE. MMM d", Locale.getDefault())
@@ -38,17 +42,34 @@ class TimelineView @JvmOverloads constructor(
     private val density = resources.displayMetrics.density
     private fun dp(v: Float) = (v * density).toInt()
 
-    // Prevent repeated day flips when the user stays at the top/bottom edge.
+    // Prevent repeated day flips when staying at top/bottom edge
     private var edgePagingLockedUntilMs: Long = 0L
+
+    // ✅ prevents "snap back to now" while user scrolls
+    private var pendingSnapToNow: Boolean = true
+    private var lastSubmitDate: LocalDate? = null
+    private var lastSubmitFollowToday: Boolean? = null
+    private var lastUserScrollMs: Long = 0L
+    private val userScrollGraceMs = 900L
 
     init {
         binding.btnLogTime.setOnClickListener { listener?.onLogTime(displayedDate) }
         binding.btnTimelineStats.setOnClickListener { listener?.onStats(displayedDate) }
-        binding.btnBackToToday.setOnClickListener { listener?.onBackToToday() }
+
+        binding.btnBackToToday.setOnClickListener {
+            // ✅ When user taps Now/Today, we allow ONE snap (and only then)
+            pendingSnapToNow = true
+            listener?.onBackToToday()
+            post { scrollToNow(animated = true) }
+        }
 
         binding.timelineScroll.setOnScrollChangeListener(
             NestedScrollView.OnScrollChangeListener { _, _, y, _, oldY ->
+                if (abs(y - oldY) > 2) {
+                    lastUserScrollMs = SystemClock.elapsedRealtime()
+                }
                 handleEdgePaging(y, oldY)
+                updateNowButtonVisibility()
             }
         )
     }
@@ -58,34 +79,53 @@ class TimelineView @JvmOverloads constructor(
     }
 
     fun submit(date: LocalDate, blocks: List<TimelineBlock>, followToday: Boolean) {
+        val today = LocalDate.now(zone)
+
+        // detect transitions that should allow snapping
+        val dateChanged = lastSubmitDate != date
+        val followChanged = lastSubmitFollowToday != followToday
+
+        if (dateChanged || (followChanged && followToday)) {
+            pendingSnapToNow = true
+        }
+
+        lastSubmitDate = date
+        lastSubmitFollowToday = followToday
+
         this.displayedDate = date
         this.followToday = followToday
 
         binding.tvTimelineDate.text = dateFormatter.format(date)
-
-        val today = LocalDate.now(ZoneId.systemDefault())
-        binding.btnBackToToday.isVisible = (!followToday) || (date != today)
-        binding.btnBackToToday.text = if (date != today) "Today" else "Back to today"
-
         binding.dayTimelineView.submit(date, blocks)
 
-        // If we are following today and displaying today, keep it snapped to "now" on first render.
-        if (followToday && date == today) {
-            post { scrollToNow(animated = false) }
+        updateNowButtonVisibility()
+
+        // ✅ Only snap when:
+        // - followToday=true
+        // - viewing today
+        // - pendingSnapToNow=true (one-shot)
+        // - user did NOT scroll recently
+        if (followToday && date == today && pendingSnapToNow) {
+            val recentlyScrolled = (SystemClock.elapsedRealtime() - lastUserScrollMs) < userScrollGraceMs
+            if (!recentlyScrolled) {
+                post {
+                    scrollToNow(animated = false)
+                    pendingSnapToNow = false
+                    updateNowButtonVisibility()
+                }
+            }
         }
     }
 
     /**
      * Call from Fragment.onResume().
-     *
-     * IMPORTANT:
-     * If followToday=true and midnight rollover happened while app was open,
-     * we must NOT call onRequestDate(today) (that would disable followToday in ViewModel).
+     * If followToday=true and midnight rollover happened, snap to today.
      */
     fun onHostResumed() {
         if (!followToday) return
-        val today = LocalDate.now(ZoneId.systemDefault())
+        val today = LocalDate.now(zone)
         if (displayedDate != today) {
+            pendingSnapToNow = true
             listener?.onBackToToday()
         }
     }
@@ -101,8 +141,29 @@ class TimelineView @JvmOverloads constructor(
         else binding.timelineScroll.scrollTo(0, targetY)
     }
 
+    private fun updateNowButtonVisibility() {
+        val today = LocalDate.now(zone)
+
+        val isToday = displayedDate == today
+        val nearNow = if (!isToday || binding.timelineScroll.height == 0) {
+            false
+        } else {
+            val nowRaw = binding.dayTimelineView.scrollYForTime(LocalTime.now())
+            val nowTarget = (nowRaw - binding.timelineScroll.height / 3).coerceAtLeast(0)
+            abs(binding.timelineScroll.scrollY - nowTarget) <= dp(24f)
+        }
+
+        // ✅ Show button when:
+        // - not following today OR
+        // - browsing another date OR
+        // - user is away from now (past OR future)
+        val show = (!followToday) || (!isToday) || (!nearNow)
+
+        binding.btnBackToToday.isVisible = show
+        binding.btnBackToToday.text = if (!isToday) "Today" else "Now"
+    }
+
     private fun handleEdgePaging(scrollY: Int, oldY: Int) {
-        // Edge paging: top => previous day, bottom => next day
         val now = SystemClock.elapsedRealtime()
         if (now < edgePagingLockedUntilMs) return
 

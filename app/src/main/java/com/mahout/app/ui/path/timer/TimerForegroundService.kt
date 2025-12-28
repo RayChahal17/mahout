@@ -14,6 +14,7 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.mahout.app.R
 import com.mahout.app.domain.path.model.TimerState
@@ -408,17 +409,15 @@ class TimerForegroundService : android.app.Service() {
         )
 
         try {
-            startForegroundCompat(notification)
+            startForegroundCompat(TimerServiceContract.NOTIFICATION_ID, notification)
             isInForeground = true
             Log.d(TAG, "Entered foreground")
-        } catch (se: SecurityException) {
-            Log.e(TAG, "startForeground failed (notifications blocked?)", se)
-            stopSelf()
         } catch (t: Throwable) {
             Log.e(TAG, "startForeground failed", t)
             stopSelf()
         }
     }
+
 
     /**
      * For targetSdk 34+ (you’re on 36), you must specify a foreground service TYPE.
@@ -427,18 +426,20 @@ class TimerForegroundService : android.app.Service() {
      * - android.permission.FOREGROUND_SERVICE
      * - android.permission.FOREGROUND_SERVICE_DATA_SYNC
      */
-    private fun startForegroundCompat(notification: Notification) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                TimerServiceContract.NOTIFICATION_ID,
+    private fun startForegroundCompat(notificationId: Int, notification: Notification) {
+        if (Build.VERSION.SDK_INT >= 29) {
+            // MUST match AndroidManifest.xml foregroundServiceType="dataSync"
+            ServiceCompat.startForeground(
+                this,
+                notificationId,
                 notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
             )
         } else {
-            @Suppress("DEPRECATION")
-            startForeground(TimerServiceContract.NOTIFICATION_ID, notification)
+            startForeground(notificationId, notification)
         }
     }
+
 
     private fun postNotificationUpdate(state: TimerState) {
         if (!canPostNotificationsInline()) return

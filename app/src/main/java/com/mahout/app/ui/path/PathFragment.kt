@@ -1,7 +1,7 @@
 package com.mahout.app.ui.path
 
+import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -11,8 +11,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -31,12 +29,12 @@ import com.mahout.app.domain.path.model.ActionCadence
 import com.mahout.app.domain.path.model.TimerState
 import com.mahout.app.domain.path.model.TimerStatus
 import com.mahout.app.ui.common.showSnackbar
-import com.mahout.app.ui.path.timer.TimerForegroundService
-import com.mahout.app.ui.path.timer.TimerServiceContract
 import com.mahout.app.ui.path.timeline.TimelineView
+import com.mahout.app.ui.path.timer.TimerController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.LocalDate
@@ -45,6 +43,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class PathFragment : Fragment() {
@@ -53,6 +52,8 @@ class PathFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: PathViewModel by viewModels()
+
+    @Inject lateinit var timerController: TimerController
 
     private var latestActions: List<Action> = emptyList()
     private var latestTimerState: TimerState? = null
@@ -77,8 +78,9 @@ class PathFragment : Fragment() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             val actionId = pendingStartActionId
             pendingStartActionId = null
+
             if (granted && actionId != null) {
-                startTimerService(actionId)
+                handleTimerResult(timerController.toggle(actionId), actionIdForRetry = null)
             } else {
                 binding.root.showSnackbar("Notifications are required to show timer controls.")
             }
@@ -103,30 +105,17 @@ class PathFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // Fixes "left open overnight" issue without breaking back-in-time browsing:
         binding.timelineView.onHostResumed()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Timeline wiring (NO TimelineScrollView anywhere)
         binding.timelineView.setListener(object : TimelineView.Listener {
-            override fun onRequestDate(date: LocalDate) {
-                viewModel.requestTimelineDate(date)
-            }
-
-            override fun onBackToToday() {
-                viewModel.backToToday()
-            }
-
-            override fun onLogTime(date: LocalDate) {
-                showLogTimeDialog(date)
-            }
-
-            override fun onStats(date: LocalDate) {
-                binding.root.showSnackbar("Stats coming soon.")
-            }
+            override fun onRequestDate(date: LocalDate) = viewModel.requestTimelineDate(date)
+            override fun onBackToToday() = viewModel.backToToday()
+            override fun onLogTime(date: LocalDate) = showLogTimeDialog(date)
+            override fun onStats(date: LocalDate) = binding.root.showSnackbar("Stats coming soon.")
         })
 
         adapter = ActionListAdapter(
@@ -207,24 +196,21 @@ class PathFragment : Fragment() {
                 }
 
                 // Timeline collectors
+                // Timeline collectors (✅ single, consistent updates)
                 launch {
-                    viewModel.timelineDate.collect { d ->
-                        latestTimelineDate = d
-                        renderTimeline()
-                    }
+                    combine(
+                        viewModel.timelineDate,
+                        viewModel.timelineBlocks,
+                        viewModel.followToday
+                    ) { d, blocks, follow -> Triple(d, blocks, follow) }
+                        .collect { (d, blocks, follow) ->
+                            latestTimelineDate = d
+                            latestTimelineBlocks = blocks
+                            latestFollowToday = follow
+                            renderTimeline()
+                        }
                 }
-                launch {
-                    viewModel.timelineBlocks.collect { blocks ->
-                        latestTimelineBlocks = blocks
-                        renderTimeline()
-                    }
-                }
-                launch {
-                    viewModel.followToday.collect { follow ->
-                        latestFollowToday = follow
-                        renderTimeline()
-                    }
-                }
+
 
                 launch {
                     viewModel.events.collect { event ->
@@ -263,8 +249,7 @@ class PathFragment : Fragment() {
         rows += today.map { action -> buildActionRow(action, timerState) }
 
         rows += PathRow.HeaderRow(title = "This week’s actions", showSizeToggle = false)
-        if (week.isEmpty()) rows += PathRow.MessageRow("No weekly actions yet.")
-        else rows += week.map { action -> buildActionRow(action, timerState) }
+        if (week.isNotEmpty()) rows += week.map { action -> buildActionRow(action, timerState) }
 
         rows += PathRow.HeaderRow(title = "Archived actions", showSizeToggle = false)
         rows += PathRow.MessageRow("Archived actions will appear here (next).")
@@ -287,15 +272,12 @@ class PathFragment : Fragment() {
 
         val targetMinutes = action.targetValue ?: 0
         val targetMs = if (targetMinutes > 0) TimeUnit.MINUTES.toMillis(targetMinutes.toLong()) else 0L
-
         val isOverTarget = targetMs > 0L && totalMillis > targetMs
 
         val percent =
             if (targetMs > 0L) {
                 ((minOf(totalMillis, targetMs) * 100L) / targetMs).toInt().coerceIn(0, 100)
-            } else {
-                0
-            }
+            } else 0
 
         val progressLabel = buildProgressLabel(totalMillis, targetMs)
 
@@ -372,28 +354,27 @@ class PathFragment : Fragment() {
             ?: "Unknown action"
         tray.tvTrayActionTitle.text = actionTitle
 
-        tray.btnTrayStop.setOnClickListener { sendTimerCommand(TimerServiceContract.ACTION_STOP) }
+        tray.btnTrayStop.setOnClickListener {
+            handleTimerResult(timerController.stop(), actionIdForRetry = null)
+        }
 
         when (state.status) {
             TimerStatus.RUNNING -> {
                 tray.btnTrayPauseResume.text = "Pause"
                 tray.btnTrayPauseResume.setOnClickListener {
-                    sendTimerCommand(TimerServiceContract.ACTION_PAUSE)
+                    handleTimerResult(timerController.pause(), actionIdForRetry = null)
                 }
             }
-
             TimerStatus.PAUSED -> {
                 tray.btnTrayPauseResume.text = "Resume"
                 tray.btnTrayPauseResume.setOnClickListener {
-                    sendTimerCommand(TimerServiceContract.ACTION_RESUME)
+                    handleTimerResult(timerController.resume(), actionIdForRetry = null)
                 }
             }
-
             else -> Unit
         }
 
         val totalMillis = computeTimerTotalMillis(state)
-
         val d = Duration.ofMillis(totalMillis)
         val hours = d.toHours()
         val minutes = (d.toMinutes() % 60)
@@ -408,7 +389,6 @@ class PathFragment : Fragment() {
         val targetMinutes = state.actionId
             ?.let { id -> latestActions.firstOrNull { it.id == id }?.targetValue }
             ?: 0
-
         val targetMs = if (targetMinutes > 0) TimeUnit.MINUTES.toMillis(targetMinutes.toLong()) else 0L
 
         val pct =
@@ -422,24 +402,21 @@ class PathFragment : Fragment() {
 
     private fun onActionTimerClick(action: Action) {
         val state = latestTimerState
+        val currentStatus = state?.status ?: TimerStatus.STOPPED
 
-        val ctxApp = requireContext().applicationContext
-        val notificationsEnabled = NotificationManagerCompat.from(ctxApp).areNotificationsEnabled()
-        if (!notificationsEnabled) {
-            Log.w("PathFragment", "Notifications disabled; cannot show timer notification.")
-            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                putExtra(Settings.EXTRA_APP_PACKAGE, ctxApp.packageName)
+        when (currentStatus) {
+            TimerStatus.STOPPED -> {
+                handleTimerResult(
+                    result = timerController.toggle(action.id),
+                    actionIdForRetry = action.id
+                )
             }
-            startActivity(intent)
-            return
-        }
-
-        when (state?.status ?: TimerStatus.STOPPED) {
-            TimerStatus.STOPPED -> ensureNotificationPermissionThenStart(action.id)
-
             TimerStatus.RUNNING, TimerStatus.PAUSED -> {
                 if (state?.actionId == action.id) {
-                    sendTimerCommand(TimerServiceContract.ACTION_STOP)
+                    handleTimerResult(
+                        result = timerController.toggle(action.id),
+                        actionIdForRetry = null
+                    )
                 } else {
                     binding.root.showSnackbar("Stop the current timer first.")
                 }
@@ -447,38 +424,46 @@ class PathFragment : Fragment() {
         }
     }
 
-    private fun ensureNotificationPermissionThenStart(actionId: String) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            startTimerService(actionId)
-            return
+    private fun showAppNotificationSettings() {
+        val ctxApp = requireContext().applicationContext
+        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, ctxApp.packageName)
         }
-
-        val granted = ContextCompat.checkSelfPermission(
-            requireContext(),
-            android.Manifest.permission.POST_NOTIFICATIONS
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (granted) {
-            startTimerService(actionId)
-        } else {
-            pendingStartActionId = actionId
-            requestPostNotifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-        }
+        startActivity(intent)
     }
 
-    private fun startTimerService(actionId: String) {
-        val ctx = requireContext()
-        val intent = Intent(ctx, TimerForegroundService::class.java).apply {
-            action = TimerServiceContract.ACTION_START
-            putExtra(TimerServiceContract.EXTRA_ACTION_ID, actionId)
-        }
-        ContextCompat.startForegroundService(ctx, intent)
-    }
+    private fun handleTimerResult(
+        result: TimerController.Result,
+        actionIdForRetry: String?
+    ) {
+        when (result) {
+            TimerController.Result.Sent -> Unit
 
-    private fun sendTimerCommand(command: String) {
-        val ctx = requireContext()
-        val intent = Intent(ctx, TimerForegroundService::class.java).apply { action = command }
-        ctx.startService(intent)
+            TimerController.Result.NotificationsDisabled -> {
+                showAppNotificationSettings()
+            }
+
+            TimerController.Result.NeedPostNotificationsPermission -> {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                    binding.root.showSnackbar("Enable notifications to control the timer.")
+                    return
+                }
+
+                val actionId = actionIdForRetry
+                if (actionId == null) {
+                    binding.root.showSnackbar("Enable notification permission to control the timer.")
+                    return
+                }
+
+                pendingStartActionId = actionId
+                requestPostNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+
+            is TimerController.Result.Error -> {
+                Log.e("PathFragment", "TimerController error", result.throwable)
+                binding.root.showSnackbar("Timer failed. Try again.")
+            }
+        }
     }
 
     private fun confirmArchiveAction(action: Action) {
@@ -576,10 +561,8 @@ class PathFragment : Fragment() {
             ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, titles)
         )
 
-        // default selection
         if (titles.isNotEmpty()) dialogBinding.actvAction.setText(titles.first(), false)
 
-        // default times: now rounded down to 5 min, +10 min
         val now = LocalTime.now()
         val roundedStart = now.withMinute((now.minute / 5) * 5).withSecond(0).withNano(0)
         var start = roundedStart

@@ -3,14 +3,17 @@ package com.mahout.app.ui.path
 import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
 import com.mahout.app.databinding.ItemActionBinding
 import com.mahout.app.databinding.ItemSectionHeaderBinding
 import com.mahout.app.domain.path.model.Action
+import com.mahout.app.ui.path.timeline.ActionColors
 
 class ActionListAdapter(
     private val onActionClick: (Action) -> Unit,
@@ -100,40 +103,77 @@ class ActionListAdapter(
         private val cardSizeProvider: () -> CardSize
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        private fun dp(v: Float): Int {
+            val d = binding.root.resources.displayMetrics.density
+            return (v * d).toInt()
+        }
+
         fun bind(row: PathRow.ActionRow) {
             val action = row.action
 
-            binding.tvActionTitle.text = action.title
-            binding.tvActionMeta.text = row.metaText
+            // ✅ One source of truth (same color everywhere)
+            val accent = ActionColors.forActionId(action.id)
 
+            val card = (binding.root as? MaterialCardView)
+
+            val surface = MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorSurface)
+            val onSurface = MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnSurface)
+            val onSurfaceVar = MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnSurfaceVariant)
+            val surfaceVar = MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorSurfaceVariant)
+
+            // --- Premium card treatment ---
+            // subtle background tint (keeps it premium, not neon)
+            val tintedBg = ColorUtils.blendARGB(surfaceVar, accent, 0.06f)
+            card?.setCardBackgroundColor(tintedBg)
+
+            // thin accent stroke instead of thick neon border
+            card?.strokeWidth = dp(1.4f)
+            card?.strokeColor = ColorUtils.setAlphaComponent(accent, 0xD0)
+            card?.cardElevation = dp(2f).toFloat()
+
+            // --- Text ---
+            binding.tvActionTitle.text = action.title
+            // keep readable: blend accent into onSurface (not pure neon)
+            binding.tvActionTitle.setTextColor(ColorUtils.blendARGB(onSurface, accent, 0.70f))
+
+            binding.tvActionMeta.text = row.metaText
+            binding.tvActionMeta.setTextColor(onSurfaceVar)
+
+            // --- Progress ---
             binding.pbProgress.max = 100
             binding.pbProgress.progress = row.progressPercent
+
             binding.tvProgressLabel.text = row.progressLabel
+            binding.tvProgressLabel.setTextColor(ColorUtils.setAlphaComponent(accent, 0xB8))
 
-            val labelColorAttr = if (row.isOverTarget)
-                com.google.android.material.R.attr.colorSecondary
-            else
-                com.google.android.material.R.attr.colorOnSurfaceVariant
+            binding.pbProgress.progressTintList = ColorStateList.valueOf(accent)
+            binding.pbProgress.progressBackgroundTintList = ColorStateList.valueOf(
+                ColorUtils.setAlphaComponent(onSurfaceVar, 0x20)
+            )
 
-            binding.tvProgressLabel.setTextColor(MaterialColors.getColor(binding.root, labelColorAttr))
-
-            // Tint progress bar (keep it neutral unless over target)
-            val barColorAttr = if (row.isOverTarget)
-                com.google.android.material.R.attr.colorSecondary
-            else
-                com.google.android.material.R.attr.colorOutline
-
-            val barColor = MaterialColors.getColor(binding.root, barColorAttr)
-            binding.pbProgress.progressTintList = ColorStateList.valueOf(barColor)
-
+            // --- Timer button ---
             binding.btnTimer.text = row.timerButtonText
             binding.btnTimer.isEnabled = row.timerButtonEnabled
 
+            val disabledText = ColorUtils.setAlphaComponent(onSurfaceVar, 0xAA)
+            val enabledText = ColorUtils.blendARGB(onSurface, accent, 0.75f)
+
+            binding.btnTimer.setTextColor(if (row.timerButtonEnabled) enabledText else disabledText)
+
+            // outlined look: accent stroke + subtle tint fill
+            binding.btnTimer.strokeWidth = dp(1.2f)
+            binding.btnTimer.strokeColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(accent, 0xCC))
+            binding.btnTimer.backgroundTintList = ColorStateList.valueOf(
+                ColorUtils.setAlphaComponent(accent, if (row.timerButtonEnabled) 0x18 else 0x10)
+            )
+
+            // --- Compact / expanded ---
             val compact = (cardSizeProvider() == CardSize.COMPACT)
             binding.tvActionMeta.isVisible = !compact
             binding.pbProgress.isVisible = !compact
             binding.tvProgressLabel.isVisible = !compact
 
+            // --- Clicks ---
             binding.root.setOnClickListener { onClick(action) }
             binding.root.setOnLongClickListener {
                 onLongClick(action)
