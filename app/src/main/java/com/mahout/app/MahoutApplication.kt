@@ -1,14 +1,26 @@
 package com.mahout.app
 
 import android.app.Application
+import androidx.appcompat.app.AppCompatDelegate
 import dagger.hilt.android.HiltAndroidApp
 
 /**
- * MahoutApplication is the global Application class.
+ * Global Application class.
  *
- * @HiltAndroidApp is REQUIRED for Hilt:
- * - It generates the base dependency container used across the whole app.
- * - Without it, @AndroidEntryPoint Activities/Fragments will crash at runtime.
+ * Phase 1 requirement:
+ * - Force dark mode ON by default for the "premium-black" feel.
+ *
+ * IMPORTANT:
+ * - This overrides the user's system setting intentionally for Phase 1.
+ * - Later we can store a user preference in DataStore.
  */
 @HiltAndroidApp
-class MahoutApplication : Application()
+class MahoutApplication : Application() {
+
+    override fun onCreate() {
+        super.onCreate()
+
+        // Force night resources + night theme.
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+    }
+}

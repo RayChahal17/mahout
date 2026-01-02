@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Base Material Theme -->
     <style name="Base.Theme.Mahout" parent="Theme.Material3.DayNight.NoActionBar">
@@ -11,14 +11,35 @@
         <item name="colorSecondary">@color/mahout_ink</item>
         <item name="colorOnSecondary">@color/mahout_bg</item>
 
-        <!-- Backgrounds / surfaces -->
+        <!-- Surfaces -->
         <item name="colorSurface">@color/mahout_surface</item>
         <item name="colorOnSurface">@color/mahout_ink</item>
-        <item name="android:colorBackground">@color/mahout_bg</item>
 
-        <!-- Status / navigation bars -->
+        <!-- IMPORTANT:
+             DO NOT use "colorBackground" (doesn't exist here).
+             Use framework background attrs instead. -->
+        <item name="android:colorBackground">@color/mahout_bg</item>
+        <item name="android:windowBackground">@color/mahout_bg</item>
+
+        <!-- Global component wiring (safe attributes) -->
+        <item name="toolbarStyle">@style/Widget.Mahout.Toolbar</item>
+
+        <item name="materialCardViewStyle">@style/Widget.Mahout.Card</item>
+
+        <item name="textInputStyle">@style/Widget.Mahout.TextInputLayout.Outlined</item>
+        <item name="editTextStyle">@style/Widget.Mahout.TextInputEditText</item>
+
+        <!-- Outlined buttons used widely via ?attr/materialButtonOutlinedStyle -->
+        <item name="materialButtonOutlinedStyle">@style/Widget.Mahout.Button.Secondary</item>
+
+        <!-- Status / navigation bars (light theme config) -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+
+        <item name="android:windowLightStatusBar">true</item>
+
+        <!-- API 27+ only: keep lint happy -->
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
 
         <!-- Control highlight tint -->
         <item name="android:colorControlHighlight">@color/mahout_nav_ripple</item>

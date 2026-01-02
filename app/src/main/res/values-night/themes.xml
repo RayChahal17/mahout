@@ -1,16 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Premium B — Dark Theme overrides -->
+    <!-- Night Theme overrides -->
     <style name="Base.Theme.Mahout" parent="Theme.Material3.DayNight.NoActionBar">
+
+        <!-- Keep the SAME core wiring as day theme (so no fallback defaults) -->
+        <item name="colorPrimary">@color/mahout_accent</item>
+        <item name="colorOnPrimary">@color/mahout_on_accent</item>
+
+        <item name="colorSecondary">@color/mahout_ink</item>
+        <item name="colorOnSecondary">@color/mahout_bg</item>
+
+        <item name="colorSurface">@color/mahout_surface</item>
+        <item name="colorOnSurface">@color/mahout_ink</item>
+
+        <item name="android:colorBackground">@color/mahout_bg</item>
         <item name="android:windowBackground">@color/mahout_bg</item>
 
+        <!-- Global component wiring (safe attributes) -->
+        <item name="toolbarStyle">@style/Widget.Mahout.Toolbar</item>
+
+        <item name="materialCardViewStyle">@style/Widget.Mahout.Card</item>
+
+        <item name="textInputStyle">@style/Widget.Mahout.TextInputLayout.Outlined</item>
+        <item name="editTextStyle">@style/Widget.Mahout.TextInputEditText</item>
+
+        <item name="materialButtonOutlinedStyle">@style/Widget.Mahout.Button.Secondary</item>
+
+        <!-- Dark bars = light icons -->
         <item name="android:statusBarColor">@color/mahout_bg</item>
         <item name="android:navigationBarColor">@color/mahout_bg</item>
 
-        <!-- Dark bars = light icons -->
         <item name="android:windowLightStatusBar">false</item>
-        <!-- DO NOT set android:windowLightNavigationBar (API 27+) -->
+
+        <!-- API 27+ only -->
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+
+        <item name="android:colorControlHighlight">@color/mahout_nav_ripple</item>
+
     </style>
 
 </resources>
