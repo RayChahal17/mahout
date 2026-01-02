@@ -34,8 +34,8 @@
     <dimen name="bottom_nav_icon_size">22dp</dimen>
 
     <!-- Bottom navigation dock (Phase 2 premium pill) -->
-    <dimen name="mahout_bottom_nav_margin_h">16dp</dimen>
-    <dimen name="mahout_bottom_nav_margin_bottom">12dp</dimen>
+    <dimen name="mahout_bottom_nav_margin_h">0dp</dimen>
+    <dimen name="mahout_bottom_nav_margin_bottom">0dp</dimen>
 
     <dimen name="mahout_bottom_nav_padding_h">8dp</dimen>
     <dimen name="mahout_bottom_nav_padding_v">6dp</dimen>
@@ -44,11 +44,14 @@
 
     <!-- Center Elephant button -->
     <dimen name="mahout_bottom_nav_center_size">64dp</dimen>
-    <dimen name="mahout_bottom_nav_center_icon_size">28dp</dimen>
+    <dimen name="mahout_bottom_nav_center_icon_size">70dp</dimen>
     <dimen name="mahout_bottom_nav_center_elevation">18dp</dimen>
 
     <!-- Negative means "lift upward" to overlap the pill dock -->
-    <dimen name="mahout_bottom_nav_center_translation_y">-18dp</dimen>
+    <!-- TWEAK KNOB: Moves the center Elephant DOWN (positive) to overlap the dock more.
+         Increase = Elephant goes LOWER into the dock.
+         Decrease = Elephant rises higher above the dock. -->
+    <dimen name="mahout_bottom_nav_center_translation_y">34dp</dimen>
 
 
 </resources>
