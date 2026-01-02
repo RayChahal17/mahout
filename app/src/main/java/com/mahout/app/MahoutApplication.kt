@@ -21,6 +21,6 @@ class MahoutApplication : Application() {
         super.onCreate()
 
         // Force night resources + night theme.
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
     }
 }

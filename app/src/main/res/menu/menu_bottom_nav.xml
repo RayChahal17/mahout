@@ -13,8 +13,9 @@
 
     <item
         android:id="@+id/elephantFragment"
-        android:icon="@drawable/ic_nav_elephant"
-        android:title="@string/tab_elephant" />
+        android:icon="@drawable/ic_nav_blank"
+        android:title="" />
+
 
     <item
         android:id="@+id/northStarFragment"

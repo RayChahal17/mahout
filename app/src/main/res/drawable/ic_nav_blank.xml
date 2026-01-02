@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!--
+      Transparent "do-nothing" icon.
+      We keep the middle slot in BottomNavigationView for spacing + selection logic,
+      but we don’t want a visible icon there because we overlay the raised Elephant.
+    -->
+    <path
+        android:fillColor="#000000"
+        android:fillAlpha="0"
+        android:pathData="M0,0h24v24h-24z" />
+</vector>

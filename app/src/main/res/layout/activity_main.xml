@@ -27,23 +27,78 @@
         app:defaultNavHost="true"
         app:navGraph="@navigation/nav_graph"
         app:layout_constraintTop_toBottomOf="@id/topAppBar"
-        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavDock"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottomNav"
+    <!-- =========================
+         Premium Bottom Nav Dock (pill)
+         ========================= -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/bottomNavDock"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
+        android:layout_marginStart="@dimen/mahout_bottom_nav_margin_h"
+        android:layout_marginEnd="@dimen/mahout_bottom_nav_margin_h"
+        android:layout_marginBottom="@dimen/mahout_bottom_nav_margin_bottom"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        app:cardBackgroundColor="@color/mahout_surface"
+        app:cardElevation="@dimen/mahout_bottom_nav_elevation"
+        app:shapeAppearance="@style/ShapeAppearance.Mahout.Pill"
+        app:strokeColor="@color/mahout_outline_soft"
+        app:strokeWidth="@dimen/mahout_stroke_1"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:menu="@menu/menu_bottom_nav"
-        app:itemIconSize="@dimen/bottom_nav_icon_size"
-        app:itemIconTint="@color/bottom_nav_icon_tint"
-        app:itemTextColor="@color/bottom_nav_icon_tint"
-        app:labelVisibilityMode="labeled" />
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- BottomNavigationView sits INSIDE the pill, with a transparent background -->
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottomNav"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:paddingStart="@dimen/mahout_bottom_nav_padding_h"
+            android:paddingEnd="@dimen/mahout_bottom_nav_padding_h"
+            android:paddingTop="@dimen/mahout_bottom_nav_padding_v"
+            android:paddingBottom="@dimen/mahout_bottom_nav_padding_v"
+            app:menu="@menu/menu_bottom_nav"
+            app:itemIconSize="@dimen/bottom_nav_icon_size"
+            app:itemIconTint="@color/bottom_nav_icon_tint"
+            app:itemTextColor="@color/bottom_nav_icon_tint"
+            app:itemRippleColor="@color/mahout_nav_ripple"
+            app:itemBackground="@null"
+            app:labelVisibilityMode="labeled" />
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- =========================
+         Center Raised Elephant (premium signature)
+         ========================= -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardElephantFab"
+        android:layout_width="@dimen/mahout_bottom_nav_center_size"
+        android:layout_height="@dimen/mahout_bottom_nav_center_size"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackgroundBorderless"
+        android:translationY="@dimen/mahout_bottom_nav_center_translation_y"
+        app:cardBackgroundColor="@color/mahout_accent"
+        app:cardElevation="@dimen/mahout_bottom_nav_center_elevation"
+        app:shapeAppearance="@style/ShapeAppearance.Mahout.Pill"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavDock"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/ivElephantFab"
+            android:layout_width="@dimen/mahout_bottom_nav_center_icon_size"
+            android:layout_height="@dimen/mahout_bottom_nav_center_icon_size"
+            android:layout_gravity="center"
+            android:contentDescription="@string/tab_elephant"
+            android:src="@drawable/ic_nav_elephant"
+            app:tint="@color/mahout_on_accent" />
+
+    </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-    
