@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/mahout_outline_soft">
+
+    <!-- The mask makes the ripple respect the 24dp rounded card corners -->
+    <item android:id="@android:id/mask">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/white" />
+            <corners android:radius="@dimen/mahout_radius_card" />
+        </shape>
+    </item>
+</ripple>
+

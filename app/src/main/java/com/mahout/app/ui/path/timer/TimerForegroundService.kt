@@ -382,7 +382,6 @@ class TimerForegroundService : android.app.Service() {
         return TimerState(
             status = status,
             actionId = actionId,
-            currentSessionId = null,
             accumulatedMillis = 0L,
             updatedAt = Instant.now()
         )

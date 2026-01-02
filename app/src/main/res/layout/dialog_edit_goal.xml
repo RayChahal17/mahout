@@ -54,23 +54,6 @@
                 android:inputType="none"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Parent Goal (optional laddering) -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilParentGoal"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_12"
-            android:hint="@string/goal_parent_label"
-            app:helperText="@string/goal_parent_helper">
-
-            <AutoCompleteTextView
-                android:id="@+id/actvParentGoal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="none"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
         <!-- Target date (optional; bounded by Chief Aim year) -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilGoalTarget"

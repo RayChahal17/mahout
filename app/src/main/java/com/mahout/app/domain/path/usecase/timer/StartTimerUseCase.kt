@@ -69,7 +69,6 @@ class StartTimerUseCase @Inject constructor(
             TimerState(
                 status = TimerStatus.RUNNING,
                 actionId = actionId,
-                currentSessionId = sessionId,
                 accumulatedMillis = seededMillis,
                 updatedAt = now
             )

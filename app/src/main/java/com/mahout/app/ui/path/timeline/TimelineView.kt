@@ -160,24 +160,29 @@ class TimelineView @JvmOverloads constructor(
         val show = (!followToday) || (!isToday) || (!nearNow)
 
         binding.btnBackToToday.isVisible = show
-        binding.btnBackToToday.text = if (!isToday) "Today" else "Now"
+        binding.btnBackToToday.text = "Now"
     }
 
     private fun handleEdgePaging(scrollY: Int, oldY: Int) {
         val now = SystemClock.elapsedRealtime()
         if (now < edgePagingLockedUntilMs) return
 
+        val today = LocalDate.now(zone)
+        val isToday = displayedDate == today
+        val bottomPagingAllowed = !(followToday && isToday)
+
         val goingUp = scrollY < oldY
         val goingDown = scrollY > oldY
-        val threshold = dp(10f)
+        val fastEnough = kotlin.math.abs(scrollY - oldY) > dp(12f)
 
         val child = binding.timelineScroll.getChildAt(0) ?: return
         val maxScroll = (child.height - binding.timelineScroll.height).coerceAtLeast(0)
 
-        if (goingUp && scrollY <= threshold) {
+        // Only flip days when user reaches the true edges with a deliberate fling
+        if (fastEnough && goingUp && scrollY <= 0) {
             edgePagingLockedUntilMs = now + 700L
             listener?.onRequestDate(displayedDate.minusDays(1))
-        } else if (goingDown && scrollY >= (maxScroll - threshold)) {
+        } else if (bottomPagingAllowed && fastEnough && goingDown && scrollY >= maxScroll) {
             edgePagingLockedUntilMs = now + 700L
             listener?.onRequestDate(displayedDate.plusDays(1))
         }

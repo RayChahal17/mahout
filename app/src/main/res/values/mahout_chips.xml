@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      Mahout Chips — Premium B
+
+      Goal:
+      - Chips look like iOS “segmented” / “filters”: calm surfaces, hairline strokes.
+      - Selected state uses a soft gold wash (NOT pure gold fill).
+    -->
+
+    <!-- Choice chip (selectable) -->
+    <style name="Widget.Mahout.Chip.Choice" parent="Widget.MaterialComponents.Chip.Choice">
+        <item name="chipMinHeight">36dp</item>
+        <item name="chipCornerRadius">@dimen/mahout_radius_chip</item>
+
+        <item name="chipStrokeWidth">@dimen/mahout_stroke_1</item>
+        <item name="chipBackgroundColor">@color/mahout_chip_bg</item>
+        <item name="chipStrokeColor">@color/mahout_chip_stroke</item>
+
+        <item name="android:textColor">@color/mahout_chip_text</item>
+        <item name="android:textAppearance">@style/TextAppearance.Mahout.LabelS</item>
+
+        <item name="rippleColor">@color/mahout_outline_soft</item>
+
+        <item name="chipStartPadding">12dp</item>
+        <item name="chipEndPadding">12dp</item>
+    </style>
+
+    <!-- Date “neutral” chip (used in journal editor) -->
+    <style name="Widget.Mahout.Chip.Date" parent="Widget.MaterialComponents.Chip.Action">
+        <item name="chipMinHeight">32dp</item>
+        <item name="chipCornerRadius">@dimen/mahout_radius_chip</item>
+
+        <!-- Always soft gold wash, no stroke -->
+        <item name="chipBackgroundColor">@color/mahout_gold_10</item>
+        <item name="chipStrokeWidth">0dp</item>
+
+        <item name="android:textColor">@color/mahout_text_primary</item>
+        <item name="android:textAppearance">@style/TextAppearance.Mahout.LabelS</item>
+
+        <item name="chipStartPadding">10dp</item>
+        <item name="chipEndPadding">10dp</item>
+    </style>
+
+    <!-- Back-compat name (your project already references this style name) -->
+    <style name="Widget.Mahout.Chip.Neutral" parent="Widget.Mahout.Chip.Date" />
+
+</resources>

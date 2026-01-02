@@ -1,77 +1,89 @@
 package com.mahout.app.data.repository.aim
 
-import com.mahout.app.core.dispatchers.DispatcherProvider
-import com.mahout.app.core.id.IdProvider
 import com.mahout.app.core.time.TimeProvider
 import com.mahout.app.data.local.aim.dao.ActionGoalLinkDao
 import com.mahout.app.data.local.aim.dao.GoalDao
 import com.mahout.app.data.local.aim.entity.ActionGoalLinkEntity
 import com.mahout.app.data.mapper.aim.toDomain
+import com.mahout.app.domain.aim.model.ActionGoalLinkInterval
 import com.mahout.app.domain.aim.model.Goal
 import com.mahout.app.domain.aim.repository.ActionGoalLinkRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import java.time.Instant
+import java.util.UUID
 import javax.inject.Inject
-import javax.inject.Singleton
 
-/**
- * Room-backed implementation for Action <-> Goal linking.
- *
- * Key behavior:
- * - observeGoalForAction(actionId) reacts to BOTH:
- *   - link changes, and
- *   - goal changes
- */
-@Singleton
 class RoomActionGoalLinkRepository @Inject constructor(
-    private val linkDao: ActionGoalLinkDao,
+    private val actionGoalLinkDao: ActionGoalLinkDao,
     private val goalDao: GoalDao,
-    private val idProvider: IdProvider,
-    private val timeProvider: TimeProvider,
-    private val dispatchers: DispatcherProvider
+    private val timeProvider: TimeProvider
 ) : ActionGoalLinkRepository {
 
     override fun observeGoalForAction(actionId: String): Flow<Goal?> {
-        return linkDao.observeActiveLinkForAction(actionId)
-            .flatMapLatest { link ->
-                if (link == null) {
-                    flowOf(null)
-                } else {
-                    goalDao.observeGoal(link.goalId)
-                        .map { entity -> entity?.toDomain() }
-                }
+        return actionGoalLinkDao.observeActiveLinkForAction(actionId)
+            .flatMapLatest { linkEntity ->
+                val goalId = linkEntity?.goalId ?: return@flatMapLatest flowOf(null)
+                goalDao.observeGoal(goalId).map { it?.toDomain() }
             }
     }
 
     override suspend fun setGoalForAction(actionId: String, goalId: String?) {
-        withContext(dispatchers.io) {
-            val now = timeProvider.nowInstant()
+        val now = timeProvider.nowInstant()
 
-            // 1) close any existing active links for this action
-            linkDao.closeActiveLinksForAction(actionId, now)
+        // Close any existing active link interval for this action
+        actionGoalLinkDao.closeActiveLinkForAction(actionId, now)
 
-            // 2) open a new link interval if goalId provided
-            if (goalId != null) {
-                linkDao.insertLink(
-                    ActionGoalLinkEntity(
-                        linkId = idProvider.newId(),
-                        actionId = actionId,
-                        goalId = goalId,
-                        linkedAt = now,
-                        unlinkedAt = null
-                    )
+        // If linking to a goal, insert new interval row
+        if (goalId != null) {
+            actionGoalLinkDao.insert(
+                ActionGoalLinkEntity(
+                    linkId = UUID.randomUUID().toString(),
+                    actionId = actionId,
+                    goalId = goalId,
+                    linkedAt = now,
+                    unlinkedAt = null
                 )
-            }
+            )
         }
     }
 
     override suspend fun unlinkActionsForGoal(goalId: String, unlinkedAt: Instant) {
-        withContext(dispatchers.io) {
-            linkDao.closeActiveLinksForGoal(goalId, unlinkedAt)
-        }
+        actionGoalLinkDao.closeActiveLinksForGoal(goalId, unlinkedAt)
     }
+
+    // ------------------------------
+    // Aim Receipts additions
+    // ------------------------------
+
+    override fun observeActiveLinks(): Flow<List<ActionGoalLinkInterval>> {
+        return actionGoalLinkDao.observeActiveLinks()
+            .map { rows -> rows.map { it.toInterval() } }
+    }
+
+    override fun observeActiveActionIdsForGoal(goalId: String): Flow<List<String>> {
+        return actionGoalLinkDao.observeActiveActionIdsForGoal(goalId)
+    }
+
+    override suspend fun getLinksOverlapping(from: Instant, to: Instant): List<ActionGoalLinkInterval> {
+        return actionGoalLinkDao.getLinksOverlapping(from, to).map { it.toInterval() }
+    }
+
+    override suspend fun getLinksOverlappingForGoal(
+        goalId: String,
+        from: Instant,
+        to: Instant
+    ): List<ActionGoalLinkInterval> {
+        return actionGoalLinkDao.getLinksOverlappingForGoal(goalId, from, to).map { it.toInterval() }
+    }
+
+    private fun ActionGoalLinkEntity.toInterval(): ActionGoalLinkInterval =
+        ActionGoalLinkInterval(
+            actionId = actionId,
+            goalId = goalId,
+            linkedAt = linkedAt,
+            unlinkedAt = unlinkedAt
+        )
 }

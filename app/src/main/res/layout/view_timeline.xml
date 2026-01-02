@@ -1,103 +1,138 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.Mahout.Card"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    app:cardUseCompatPadding="false"
+    app:cardPreventCornerOverlap="false">
 
-    <!-- Header row inside the card -->
-    <ImageButton
-        android:id="@+id/btnLogTime"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:background="@drawable/bg_timeline_icon_button"
-        android:contentDescription="Log time"
-        android:src="@drawable/ic_add_24"
-        app:tint="?attr/colorOnSurface"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginStart="14dp"
-        android:layout_marginTop="14dp"/>
-
-    <TextView
-        android:id="@+id/tvLogTimeLabel"
-        android:layout_width="wrap_content"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Log time"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        app:layout_constraintStart_toEndOf="@id/btnLogTime"
-        app:layout_constraintTop_toTopOf="@id/btnLogTime"
-        app:layout_constraintBottom_toBottomOf="@id/btnLogTime"
-        android:layout_marginStart="12dp"/>
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="10dp">
 
-    <TextView
-        android:id="@+id/tvTimelineDate"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="Wed. Dec 24"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:maxLines="1"
-        android:ellipsize="end"
-        app:layout_constraintStart_toEndOf="@id/tvLogTimeLabel"
-        app:layout_constraintEnd_toStartOf="@id/btnBackToToday"
-        app:layout_constraintTop_toTopOf="@id/btnLogTime"
-        app:layout_constraintBottom_toBottomOf="@id/btnLogTime"
-        android:layout_marginStart="12dp"
-        android:layout_marginEnd="10dp"/>
+        <!-- Left: Log time -->
+        <ImageButton
+            android:id="@+id/btnLogTime"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/ripple_mahout_icon_button"
+            android:contentDescription="Log time"
+            android:src="@drawable/ic_add_24"
+            app:tint="?attr/colorOnSurface"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Appears when not on today (or followToday=false). Lives BESIDE the date. -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnBackToToday"
-        style="?attr/materialButtonOutlinedStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="34dp"
-        android:text="Today"
-        android:visibility="gone"
-        app:cornerRadius="18dp"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        android:paddingStart="14dp"
-        android:paddingEnd="14dp"
-        app:layout_constraintEnd_toStartOf="@id/btnTimelineStats"
-        app:layout_constraintTop_toTopOf="@id/btnLogTime"
-        app:layout_constraintBottom_toBottomOf="@id/btnLogTime"
-        android:layout_marginEnd="10dp"/>
-
-    <ImageButton
-        android:id="@+id/btnTimelineStats"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:background="@drawable/bg_timeline_icon_button"
-        android:contentDescription="Stats"
-        android:src="@drawable/ic_timeline_bars_24"
-        app:tint="?attr/colorOnSurface"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/btnLogTime"
-        android:layout_marginEnd="14dp"/>
-
-    <androidx.core.widget.NestedScrollView
-        android:id="@+id/timelineScroll"
-        android:layout_width="0dp"
-        android:layout_height="290dp"
-        android:fillViewport="true"
-        android:overScrollMode="always"
-        app:layout_constraintTop_toBottomOf="@id/btnLogTime"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="0dp">
-
-        <com.mahout.app.ui.path.timeline.DayTimelineView
-            android:id="@+id/dayTimelineView"
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/tvLogTimeLabel"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"/>
-    </androidx.core.widget.NestedScrollView>
+            android:text="Log"
+            android:textSize="11sp"
+            android:alpha="0.7"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginTop="2dp"
+            app:layout_constraintTop_toBottomOf="@id/btnLogTime"
+            app:layout_constraintStart_toStartOf="@id/btnLogTime"
+            app:layout_constraintEnd_toEndOf="@id/btnLogTime" />
+
+        <!-- Center: Date pill -->
+        <!-- Center: Date pill -->
+        <TextView
+            android:id="@+id/tvTimelineDate"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_mahout_date_pill"
+            android:gravity="center"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:text="Tue. Dec 31"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:textColor="?attr/colorOnSurface"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            app:layout_constraintTop_toTopOf="@id/btnLogTime"
+            app:layout_constraintBottom_toBottomOf="@id/btnLogTime"
+            app:layout_constraintStart_toEndOf="@id/btnLogTime"
+            app:layout_constraintEnd_toStartOf="@id/barrierDateRight"
+            />
+
+        <!-- “Back to Today / Now” pill (shows only when needed) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBackToToday"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_marginEnd="10dp"
+            android:backgroundTint="@color/mahout_surface"
+            android:text="Now"
+            android:textAllCaps="false"
+            android:textColor="@color/mahout_text_primary"
+            android:visibility="gone"
+            app:cornerRadius="16dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnTimelineStats"
+            app:layout_constraintTop_toTopOf="parent"
+            app:strokeColor="@color/mahout_outline_soft"
+            app:strokeWidth="1dp" />
+
+
+        <!-- NEW: right-edge barrier for the date pill
+             - If "Now" is visible: barrier sits at Now's START → date shrinks a bit, stays centered.
+             - If "Now" is GONE: barrier sits at Stats START → date re-centers automatically. -->
+        <androidx.constraintlayout.widget.Barrier
+            android:id="@+id/barrierDateRight"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:barrierAllowsGoneWidgets="false"
+            app:barrierDirection="start"
+            app:constraint_referenced_ids="btnBackToToday,btnTimelineStats" />
 
 
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Right: Stats -->
+        <ImageButton
+            android:id="@+id/btnTimelineStats"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/ripple_mahout_icon_button"
+            android:contentDescription="Stats"
+            android:src="@drawable/ic_timeline_bars_24"
+            app:tint="?attr/colorOnSurface"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!--
+          IMPORTANT FIX:
+          Fixed-height “viewport” so the timeline does NOT push other Path content (like action cards) off-screen.
+          This preserves your screen functionality/layout.
+        -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/timelineScroll"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/timeline_viewport_height"
+            android:layout_marginTop="12dp"
+            android:overScrollMode="never"
+            android:fillViewport="true"
+            app:layout_constraintTop_toBottomOf="@id/tvLogTimeLabel"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <com.mahout.app.ui.path.timeline.DayTimelineView
+                android:id="@+id/dayTimelineView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="6dp" />
+        </androidx.core.widget.NestedScrollView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

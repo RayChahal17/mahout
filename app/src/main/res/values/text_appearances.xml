@@ -1,23 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!--
+      Mahout Typography — Premium B
 
-    <!-- Use MaterialComponents (Material2) parents to avoid missing Material3 resources -->
+      NOTE:
+      We’re staying on system fonts for now (no binary font files in Phase 1).
+      You’ll still get a premium look via sizing + weight + line height discipline.
+      If you want Inter later, we’ll add res/font + update these styles.
+    -->
 
-    <style name="TextAppearance.Mahout.Title" parent="TextAppearance.MaterialComponents.Headline6">
+    <!-- =========================
+         New tokenized type scale
+         ========================= -->
+
+    <!-- Screen title -->
+    <style name="TextAppearance.Mahout.TitleXL" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textSize">28sp</item>
         <item name="android:textStyle">bold</item>
+        <item name="lineHeight">34sp</item>
     </style>
 
-    <style name="TextAppearance.Mahout.Body" parent="TextAppearance.MaterialComponents.Body1" />
+    <!-- Section title -->
+    <style name="TextAppearance.Mahout.TitleL" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="lineHeight">28sp</item>
+    </style>
 
-    <style name="TextAppearance.Mahout.Caption" parent="TextAppearance.MaterialComponents.Caption">
+    <!-- Card title -->
+    <style name="TextAppearance.Mahout.TitleM" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="lineHeight">24sp</item>
+    </style>
+
+    <!-- Body -->
+    <style name="TextAppearance.Mahout.BodyL" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textSize">16sp</item>
+        <item name="lineHeight">24sp</item>
+    </style>
+
+    <style name="TextAppearance.Mahout.BodyM" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textSize">14sp</item>
+        <item name="lineHeight">20sp</item>
+    </style>
+
+    <!-- Labels (chips/buttons) -->
+    <style name="TextAppearance.Mahout.LabelL" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">13sp</item>
+        <item name="lineHeight">18sp</item>
+    </style>
+
+    <style name="TextAppearance.Mahout.LabelS" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">12sp</item>
+        <item name="lineHeight">16sp</item>
+    </style>
+
+    <!-- =========================
+         Backwards-compatible names (existing layouts may reference these)
+         ========================= -->
+
+    <style name="TextAppearance.Mahout.Title" parent="TextAppearance.Mahout.TitleM" />
+    <style name="TextAppearance.Mahout.Body" parent="TextAppearance.Mahout.BodyL" />
+
+    <style name="TextAppearance.Mahout.Caption" parent="TextAppearance.Mahout.LabelS">
+        <!-- Slightly muted caption -->
         <item name="android:alpha">0.78</item>
     </style>
 
-    <style name="TextAppearance.Mahout.ToolbarTitle" parent="TextAppearance.MaterialComponents.Subtitle1">
-        <item name="android:textStyle">bold</item>
+    <style name="TextAppearance.Mahout.ToolbarTitle" parent="TextAppearance.Mahout.TitleM">
+        <item name="android:textSize">18sp</item>
     </style>
 
-    <style name="Widget.Mahout.Toolbar" parent="Widget.MaterialComponents.Toolbar">
+    <style name="Widget.Mahout.Toolbar" parent="Widget.Material3.Toolbar">
         <item name="titleTextAppearance">@style/TextAppearance.Mahout.ToolbarTitle</item>
     </style>
 

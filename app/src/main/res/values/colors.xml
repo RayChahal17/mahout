@@ -1,8 +1,97 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Base palette -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Semantic tokens (light) -->
+    <color name="mahout_bg">#FDFCF7</color>
+    <color name="mahout_surface">#FFFFFF</color>
+    <color name="mahout_surface_alt">#F7F7F7</color>
+    <color name="mahout_stroke">#E0E0E0</color>
+
+    <color name="mahout_text_primary">#1C1C1C</color>
+    <color name="mahout_text_secondary">#6E6E6E</color>
+    <color name="mahout_text_tertiary">#8A8A8A</color>
+
+    <color name="mahout_accent">#D8A04D</color>
+    <color name="mahout_accent_soft">#F5EFE1</color>
+    <color name="mahout_on_accent">#FFFFFF</color>
+    <color name="mahout_ink">#1C1C1C</color>
+
+    <color name="mahout_success">#27AE60</color>
+    <color name="mahout_danger">#E74C3C</color>
+
+    <!-- Segment buttons -->
+    <color name="mahout_segment_container_fill">@color/mahout_surface</color>
+    <color name="mahout_segment_container_stroke">@color/mahout_stroke</color>
+    <color name="mahout_segment_checked_bg">@color/mahout_text_primary</color>
+    <color name="mahout_segment_checked_text">@color/mahout_surface</color>
+    <color name="mahout_segment_unchecked_text">@color/mahout_text_primary</color>
+    <color name="mahout_segment_selected_dark">@color/mahout_surface_alt</color>
+
+    <!-- Legacy / compatibility -->
+    <color name="mahout_gold_500">@color/mahout_accent</color>
+    <color name="mahout_gold">@color/mahout_accent</color>
+    <color name="mahout_teal_900">#0C5B60</color>
+    <color name="mahout_surface_0">@color/mahout_surface</color>
+    <color name="mahout_surface_1">@color/mahout_surface_alt</color>
+    <color name="mahout_ink_900">@color/mahout_text_primary</color>
+    <color name="mahout_ink_500">@color/mahout_text_secondary</color>
+    <color name="mahout_stroke_light">@color/mahout_stroke</color>
+    <color name="mahout_blue_200">#F5EFE1</color>
+    <color name="mahout_blue_100">#FAF5EB</color>
+    <color name="mahout_blue_300">@color/mahout_accent</color>
+    <color name="mahout_gray_pill">@color/mahout_surface_alt</color>
+    <color name="mahout_tab_underline">@color/mahout_text_secondary</color>
+    <color name="mahout_screen_bg_end">@color/mahout_bg</color>
+
+    <!-- Ripple / outlines / disabled -->
+    <color name="mahout_outline_soft">#1A000000</color>
+    <color name="mahout_outline_strong">#33000000</color>
+    <color name="mahout_ripple_dark">#14000000</color>
+    <color name="mahout_ripple_light">#22FFFFFF</color>
+    <color name="mahout_nav_ripple">@color/mahout_ripple_dark</color>
+    <color name="mahout_disabled_bg">#E0E0E0</color>
+    <color name="mahout_disabled_text">#B0B0B0</color>
+    <color name="mahout_gold_10">#1AD8A04D</color>
+    <color name="mahout_card_overlay">#E6FFFFFF</color>
+    <color name="mahout_paper_line">#1A000000</color>
+
+    <!-- Legacy aliases -->
+    <color name="mahout_charcoal">@color/mahout_text_primary</color>
+    <color name="mahout_charcoal_light">@color/mahout_text_secondary</color>
+    <color name="mahout_off_white">@color/mahout_bg</color>
+    <color name="mahout_transparent_black_10">#1A000000</color>
+
+    <!-- Aim header gradient -->
     <color name="aim_header_start">#2E5C66</color>
     <color name="aim_header_end">#8FB0B6</color>
 
+    <!-- Settings screen -->
+    <color name="mahout_settings_color">@color/mahout_text_secondary</color>
+
+    <!-- Legacy “premium_*” names -->
+    <color name="premium_background">@color/mahout_bg</color>
+    <color name="premium_card_background">@color/mahout_surface_alt</color>
+    <color name="premium_card_light">@color/mahout_surface</color>
+    <color name="premium_card_stroke">@color/mahout_outline_soft</color>
+    <color name="premium_text_primary">@color/mahout_text_primary</color>
+    <color name="premium_text_secondary">@color/mahout_text_secondary</color>
+
+    <!-- Legacy “mahout_premium_*” aliases -->
+    <color name="mahout_premium_bg">@color/mahout_bg</color>
+    <color name="mahout_premium_surface">@color/mahout_surface</color>
+    <color name="mahout_premium_surface_alt">@color/mahout_surface_alt</color>
+    <color name="mahout_premium_ink_primary">@color/mahout_text_primary</color>
+    <color name="mahout_premium_ink_secondary">@color/mahout_text_secondary</color>
+    <color name="mahout_premium_ink_tertiary">@color/mahout_text_tertiary</color>
+    <color name="mahout_premium_outline">@color/mahout_outline_soft</color>
+    <color name="mahout_premium_outline_strong">@color/mahout_outline_strong</color>
+    <color name="mahout_premium_accent">@color/mahout_accent</color>
+    <color name="mahout_premium_on_accent">@color/mahout_on_accent</color>
+    <color name="mahout_premium_accent_soft">@color/mahout_accent_soft</color>
+    <color name="mahout_premium_progress_track">@color/mahout_stroke</color>
+    <color name="mahout_premium_on_header">#FFFFFFFF</color>
+    <color name="mahout_premium_on_header_outline">#33FFFFFF</color>
 </resources>

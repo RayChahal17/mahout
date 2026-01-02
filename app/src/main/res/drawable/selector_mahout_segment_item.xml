@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- If used inside MaterialButtonToggleGroup -->
+    <item android:state_checked="true" android:drawable="@drawable/bg_mahout_segment_selected"/>
+
+    <!-- If you manually call view.isSelected = true -->
+    <item android:state_selected="true" android:drawable="@drawable/bg_mahout_segment_selected"/>
+
+    <!-- Default: transparent so container shows -->
+    <item>
+        <shape>
+            <solid android:color="@android:color/transparent"/>
+            <corners android:radius="@dimen/mahout_radius_pill"/>
+        </shape>
+    </item>
+</selector>

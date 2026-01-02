@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Segmented control buttons (MaterialButtonToggleGroup safe) -->
+    <style name="Widget.Mahout.Button.SegmentItemDark" parent="Widget.MaterialComponents.Button">
+        <!-- Size / padding -->
+        <item name="android:minHeight">42dp</item>
+        <item name="android:paddingLeft">12dp</item>
+        <item name="android:paddingRight">12dp</item>
+
+        <!-- Use tint, not custom background, so shapeAppearanceModel is available -->
+        <item name="backgroundTint">@color/mahout_segment_bg_tint</item>
+        <item name="rippleColor">@color/mahout_ripple_dark</item>
+
+        <!-- Text -->
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/mahout_segment_text_color</item>
+
+        <!-- Flat -->
+        <item name="elevation">0dp</item>
+        <item name="android:stateListAnimator">@null</item>
+
+        <!-- No borders/dividers (container provides outline) -->
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <!-- Apply corner rules per position -->
+    <style name="Widget.Mahout.Button.SegmentItemDark.Left" parent="Widget.Mahout.Button.SegmentItemDark">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Mahout.Segment.Left</item>
+    </style>
+
+    <style name="Widget.Mahout.Button.SegmentItemDark.Middle" parent="Widget.Mahout.Button.SegmentItemDark">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Mahout.Segment.Middle</item>
+    </style>
+
+    <style name="Widget.Mahout.Button.SegmentItemDark.Right" parent="Widget.Mahout.Button.SegmentItemDark">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Mahout.Segment.Right</item>
+    </style>
+
+</resources>

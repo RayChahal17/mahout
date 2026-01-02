@@ -1,7 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+
+    <!-- Premium B — Dark Theme overrides -->
     <style name="Base.Theme.Mahout" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="android:windowBackground">@color/mahout_bg</item>
+
+        <item name="android:statusBarColor">@color/mahout_bg</item>
+        <item name="android:navigationBarColor">@color/mahout_bg</item>
+
+        <!-- Dark bars = light icons -->
+        <item name="android:windowLightStatusBar">false</item>
+        <!-- DO NOT set android:windowLightNavigationBar (API 27+) -->
     </style>
+
 </resources>

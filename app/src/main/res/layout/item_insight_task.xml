@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp"
+    android:background="?attr/selectableItemBackground">
+
+    <!-- Fixed start for ALL bars (so they compare cleanly) -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guidelineBarStart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_begin="132dp" />
+
+    <!-- Colored sphere indicator -->
+    <View
+        android:id="@+id/viewColorIndicator"
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:background="@drawable/bg_circle_indicator"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/tvTaskTitle"
+        app:layout_constraintBottom_toBottomOf="@id/tvTaskTitle"
+        android:layout_marginEnd="12dp"/>
+
+    <!-- Task title -->
+    <TextView
+        android:id="@+id/tvTaskTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Read Book"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginStart="10dp"
+        android:textColor="@color/premium_text_primary"
+        android:letterSpacing="0.01"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:ellipsize="end"
+        app:layout_constraintStart_toEndOf="@id/viewColorIndicator"
+        app:layout_constraintEnd_toStartOf="@id/guidelineBarStart"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginEnd="10dp"
+        tools:text="Read Book"/>
+
+    <!-- Task duration - on the right -->
+    <TextView
+        android:id="@+id/tvTaskDuration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="1h 20m"
+        android:textSize="14sp"
+        android:textColor="@color/premium_text_secondary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBaseline_toBaselineOf="@id/tvTaskTitle"
+        tools:text="1h 20m"/>
+
+    <!-- Progress bar - all same grey color, extends almost to time -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="0dp"
+        android:layout_height="6dp"
+        android:max="100"
+        android:progress="75"
+        android:progressTint="#D0D0D0"
+        android:progressBackgroundTint="#E5E5E5"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="12dp"
+        app:layout_constraintStart_toStartOf="@id/guidelineBarStart"
+        app:layout_constraintEnd_toStartOf="@id/tvTaskDuration"
+        app:layout_constraintTop_toBottomOf="@id/tvTaskTitle"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:progress="75"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+

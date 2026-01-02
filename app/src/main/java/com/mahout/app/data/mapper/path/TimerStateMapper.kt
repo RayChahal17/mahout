@@ -11,7 +11,6 @@ import com.mahout.app.domain.path.model.TimerState
 fun TimerStateEntity.toDomain(): TimerState = TimerState(
     status = status,
     actionId = actionId,
-    currentSessionId = currentSessionId,
     accumulatedMillis = accumulatedMillis,
     updatedAt = updatedAt
 )
@@ -20,7 +19,7 @@ fun TimerState.toEntity(): TimerStateEntity = TimerStateEntity(
     timerId = TimerStateEntity.TIMER_ID,
     status = status,
     actionId = actionId,
-    currentSessionId = currentSessionId,
+    currentSessionId = null,
     accumulatedMillis = accumulatedMillis,
     updatedAt = updatedAt
 )

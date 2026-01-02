@@ -6,78 +6,104 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="@dimen/spacing_12"
-    app:cardElevation="8dp"
+    app:cardElevation="2dp"
     app:cardUseCompatPadding="true"
-    app:cardCornerRadius="24dp"
-    app:cardBackgroundColor="?attr/colorSurfaceVariant">
+    app:cardCornerRadius="16dp"
+    app:cardBackgroundColor="#FAFAFC">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="@dimen/spacing_16">
 
-        <TextView
-            android:id="@+id/tvActionTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/spacing_12"
-            android:text="Learn about AI"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:maxLines="2"
-            android:ellipsize="end"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/btnTimer"/>
+    <!-- Fixed card background (NOT action-based).
+        Try ONE of these:
+        #FAFAFC  (cool off-white)
+        #FFFDF8  (warm off-white)
+        #F7F7F9  (neutral off-white)
+        #F5F6F8  (slightly darker)
+   -->
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnTimer"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="34dp"
-            android:minHeight="34dp"
-            android:text="Start"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            app:cornerRadius="18dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"/>
+<androidx.constraintlayout.widget.ConstraintLayout
+android:layout_width="match_parent"
+android:layout_height="wrap_content"
+android:padding="@dimen/spacing_16">
 
-        <TextView
-            android:id="@+id/tvActionMeta"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_8"
-            android:text="Repeats weekly • Target 120m"
-            android:textSize="13sp"
-            app:layout_constraintTop_toBottomOf="@id/tvActionTitle"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
+<TextView
+    android:id="@+id/tvActionTitle"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_marginEnd="@dimen/spacing_12"
+    android:text="Learn about AI"
+    android:textStyle="bold"
+    android:includeFontPadding="false"
+    android:textSize="14sp"
+    android:maxLines="2"
+    android:ellipsize="end"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toTopOf="parent"
+    app:layout_constraintEnd_toStartOf="@id/btnTimer" />
 
-        <ProgressBar
-            android:id="@+id/pbProgress"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="0dp"
-            android:layout_height="6dp"
-            android:layout_marginTop="@dimen/spacing_12"
-            android:max="100"
-            android:progress="0"
-            app:layout_constraintTop_toBottomOf="@id/tvActionMeta"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
+<!-- aligned to the title block (stays centered even if title wraps) -->
+<com.google.android.material.button.MaterialButton
+    android:id="@+id/btnTimer"
+    style="?attr/materialButtonOutlinedStyle"
+    android:layout_width="wrap_content"
+    android:layout_height="36dp"
+    android:minHeight="36dp"
+    android:text="Start"
+    android:includeFontPadding="false"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    app:cornerRadius="18dp"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintTop_toTopOf="@id/tvActionTitle"
+    app:layout_constraintBottom_toBottomOf="@id/tvActionTitle" />
 
-        <TextView
-            android:id="@+id/tvProgressLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_8"
-            android:text="0m / 0m"
-            android:textSize="12sp"
-            app:layout_constraintTop_toBottomOf="@id/pbProgress"
-            app:layout_constraintStart_toStartOf="parent"/>
+<TextView
+    android:id="@+id/tvActionMeta"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_8"
+    android:text="Repeats weekly • Target 120m"
+    android:textSize="13sp"
+    app:layout_constraintTop_toBottomOf="@id/tvActionTitle"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+<ProgressBar
+    android:id="@+id/pbProgress"
+    style="?android:attr/progressBarStyleHorizontal"
+    android:layout_width="0dp"
+    android:layout_height="6dp"
+    android:layout_marginTop="@dimen/spacing_12"
+    android:max="100"
+    android:progress="0"
+    app:layout_constraintTop_toBottomOf="@id/tvActionMeta"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent" />
 
-</com.google.android.material.card.MaterialCardView>
+<TextView
+    android:id="@+id/tvProgressLabel"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_8"
+    android:text="0m / 0m"
+    android:textSize="12sp"
+    app:layout_constraintTop_toBottomOf="@id/pbProgress"
+    app:layout_constraintStart_toStartOf="parent" />
+
+<!-- Linked goal info: "Learn AI (2-5y)" -->
+<TextView
+    android:id="@+id/tvLinkedGoal"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_8"
+    android:textSize="12sp"
+    android:textColor="?attr/colorOnSurfaceVariant"
+    android:drawableStart="@android:drawable/ic_menu_myplaces"
+    android:drawablePadding="6dp"
+    android:visibility="gone"
+    app:layout_constraintTop_toBottomOf="@id/tvProgressLabel"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+    </com.google.android.material.card.MaterialCardView>

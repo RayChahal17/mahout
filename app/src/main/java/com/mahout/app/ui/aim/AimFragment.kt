@@ -11,6 +11,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.datepicker.CalendarConstraints
 import com.google.android.material.datepicker.CompositeDateValidator
@@ -29,6 +30,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -42,19 +44,17 @@ class AimFragment : Fragment() {
     private val viewModel: AimViewModel by viewModels()
 
     /**
-     * We keep the latest Chief Aim in-memory so we can:
+     * Keep the latest Chief Aim so we can:
      * - enforce goal date <= Chief Aim target YEAR (Dec 31 of that year)
-     * - explain constraints to the user
      */
     private var lastChiefAim: ChiefAimUiModel? = null
 
     private val targetFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())
 
-    // RecyclerView adapter for Goals list
-    private val goalsAdapter = GoalListAdapter { goal ->
-        // Tap a goal row -> edit
-        showEditGoalDialog(existing = goal)
-    }
+    private val goalsAdapter = GoalListAdapter(
+        onClick = { goal -> showEditGoalDialog(existing = goal) },
+        onLongClick = { goal -> showGoalDetailDialog(goal) }
+    )
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -68,43 +68,32 @@ class AimFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        /**
-         * KEY UX REQUIREMENT:
-         * - Only the roadmap area scrolls vertically.
-         * - That means rvGoals is the only vertical scrolling view.
-         *
-         * The XML (fragment_aim.xml) must NOT wrap everything in NestedScrollView.
-         */
+        // Only rvGoals scrolls vertically
         binding.rvGoals.layoutManager = LinearLayoutManager(requireContext())
         binding.rvGoals.adapter = goalsAdapter
 
-        // Add Goal: if Chief Aim target isn't set, block and explain WHY.
+        // Add Goal: if Chief Aim target isn't set, block and explain.
         binding.btnAddGoal.setOnClickListener {
             val chiefAimTarget = lastChiefAim?.targetDate
             if (chiefAimTarget == null) {
                 binding.root.showSnackbar(getString(R.string.goal_target_requires_chief_aim_target))
-                // Helpful: jump user into the Chief Aim dialog instead of dead-ending.
                 showEditChiefAimDialog(existing = lastChiefAim)
                 return@setOnClickListener
             }
             showEditGoalDialog(existing = null)
         }
 
-        // Chief Aim card tap = edit
+        // Chief Aim card tap = edit (or set if empty)
         binding.cardChiefAim.setOnClickListener {
             showEditChiefAimDialog(existing = lastChiefAim)
         }
 
-        // Empty state CTA inside Chief Aim card
+        // Empty-state CTA inside Chief Aim card
         binding.btnSetChiefAim.setOnClickListener {
             showEditChiefAimDialog(existing = null)
         }
 
-        /**
-         * Horizontal roadmap headings:
-         * Next 30d -> 1-6m -> 6-24m -> 2-10y -> Archived
-         * These buttons live in a HorizontalScrollView in fragment_aim.xml.
-         */
+        // Roadmap buckets (horizontal)
         binding.toggleRoadmapBuckets.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
             val bucket = RoadmapBucket.fromButtonId(checkedId) ?: return@addOnButtonCheckedListener
@@ -141,10 +130,12 @@ class AimFragment : Fragment() {
 
         when (state) {
             AimUiState.Loading -> {
+                lastChiefAim = null
                 binding.groupChiefAimEmpty.isVisible = false
                 binding.groupChiefAimContent.isVisible = false
                 binding.tvGoalsEmpty.isVisible = false
                 binding.rvGoals.isVisible = false
+                binding.btnSetChiefAim.isVisible = false
             }
 
             is AimUiState.Empty -> {
@@ -154,6 +145,10 @@ class AimFragment : Fragment() {
 
                 binding.groupChiefAimEmpty.isVisible = true
                 binding.groupChiefAimContent.isVisible = false
+
+                // show CTA only when no Chief Aim
+                binding.btnSetChiefAim.isVisible = true
+
                 binding.chipHeroSummary.text = state.stats.heroSummary
             }
 
@@ -164,6 +159,9 @@ class AimFragment : Fragment() {
 
                 binding.groupChiefAimEmpty.isVisible = false
                 binding.groupChiefAimContent.isVisible = true
+
+                // IMPORTANT: hide the "Set Chief Aim" button once a Chief Aim exists
+                binding.btnSetChiefAim.isVisible = false
 
                 binding.tvChiefAimTitle.text = state.chiefAim.title
 
@@ -195,7 +193,6 @@ class AimFragment : Fragment() {
         binding.tvGoalsEmpty.isVisible = isEmpty
         binding.rvGoals.isVisible = !isEmpty
 
-        // Clear messaging (clients must understand why)
         binding.tvGoalsEmpty.text = when (bucket) {
             RoadmapBucket.NEXT_30_DAYS -> getString(R.string.goals_empty_bucket_30_days)
             RoadmapBucket.ONE_TO_SIX_MONTHS -> getString(R.string.goals_empty_bucket_1_6)
@@ -214,16 +211,12 @@ class AimFragment : Fragment() {
         dialogBinding.etTitle.setText(existing?.title.orEmpty())
         dialogBinding.etDescription.setText(existing?.description.orEmpty())
 
-        // Required by the new product rule
         var selectedTargetDate: LocalDate? = existing?.targetDate
 
-        // UI explanation
         dialogBinding.tilTarget.helperText = getString(R.string.aim_target_date_range_helper)
 
         fun renderTargetField() {
-            dialogBinding.etTarget.setText(
-                selectedTargetDate?.format(targetFormatter).orEmpty()
-            )
+            dialogBinding.etTarget.setText(selectedTargetDate?.format(targetFormatter).orEmpty())
         }
         renderTargetField()
 
@@ -232,10 +225,9 @@ class AimFragment : Fragment() {
             val min = today.plusYears(5)
             val max = today.plusYears(20)
 
-            val minMillis = min.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
-            val maxMillis = max.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+            val minMillis = min.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val maxMillis = max.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-            // Make max inclusive by allowing "before max+1day"
             val validators = listOf(
                 DateValidatorPointForward.from(minMillis),
                 DateValidatorPointBackward.before(maxMillis + 24 * 60 * 60 * 1000L)
@@ -248,8 +240,8 @@ class AimFragment : Fragment() {
                 .build()
 
             val selectionMillis = selectedTargetDate
-                ?.atStartOfDay()
-                ?.toInstant(ZoneOffset.UTC)
+                ?.atStartOfDay(ZoneId.systemDefault())
+                ?.toInstant()
                 ?.toEpochMilli()
                 ?: minMillis
 
@@ -332,7 +324,6 @@ class AimFragment : Fragment() {
         var selectedTargetDate: LocalDate? = existing?.targetDate
         var selectedHorizon: GoalHorizon = existing?.horizon ?: GoalHorizon.NEARTERM
 
-        // Horizon dropdown adapter
         val horizonAdapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_list_item_1,
@@ -340,11 +331,6 @@ class AimFragment : Fragment() {
         )
         dialogBinding.actvHorizon.setAdapter(horizonAdapter)
 
-        /**
-         * If target date is set:
-         * - horizon must be auto-derived
-         * - user cannot manually change horizon (prevents mismatch)
-         */
         fun syncHorizonUiWithTargetDate() {
             val date = selectedTargetDate
             if (date != null) {
@@ -367,8 +353,6 @@ class AimFragment : Fragment() {
 
         syncHorizonUiWithTargetDate()
 
-        // Chief Aim target rule:
-        // Goals cannot go past Dec 31 of Chief Aim's target year.
         val chiefAimTarget = lastChiefAim?.targetDate
         val maxGoalDate = chiefAimTarget?.let { LocalDate.of(it.year, 12, 31) }
 
@@ -380,9 +364,7 @@ class AimFragment : Fragment() {
             }
 
         fun renderTargetField() {
-            dialogBinding.etGoalTarget.setText(
-                selectedTargetDate?.format(targetFormatter).orEmpty()
-            )
+            dialogBinding.etGoalTarget.setText(selectedTargetDate?.format(targetFormatter).orEmpty())
         }
         renderTargetField()
 
@@ -393,8 +375,8 @@ class AimFragment : Fragment() {
             }
 
             val today = LocalDate.now()
-            val minMillis = today.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
-            val maxMillis = maxGoalDate.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+            val minMillis = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val maxMillis = maxGoalDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
             val validators = listOf(
                 DateValidatorPointForward.from(minMillis),
@@ -408,8 +390,8 @@ class AimFragment : Fragment() {
                 .build()
 
             val selectionMillis = selectedTargetDate
-                ?.atStartOfDay()
-                ?.toInstant(ZoneOffset.UTC)
+                ?.atStartOfDay(ZoneId.systemDefault())
+                ?.toInstant()
                 ?.toEpochMilli()
                 ?: minMillis
 
@@ -432,7 +414,6 @@ class AimFragment : Fragment() {
             picker.show(childFragmentManager, "goal_target_picker")
         }
 
-        // Optional UX: long press target field to clear date
         dialogBinding.etGoalTarget.setOnLongClickListener {
             selectedTargetDate = null
             dialogBinding.tilGoalTarget.error = null
@@ -441,7 +422,6 @@ class AimFragment : Fragment() {
             true
         }
 
-        // Build dialog safely (prevents ResourceNotFoundException for neutral button)
         val builder = MaterialAlertDialogBuilder(requireContext())
             .setTitle(if (existing == null) R.string.goal_dialog_title_add else R.string.goal_dialog_title_edit)
             .setView(dialogBinding.root)
@@ -465,7 +445,6 @@ class AimFragment : Fragment() {
                 }
                 dialogBinding.tilGoalTitle.error = null
 
-                // Extra safety (even though picker restricts it)
                 if (selectedTargetDate != null && maxGoalDate != null && selectedTargetDate!!.isAfter(maxGoalDate)) {
                     dialogBinding.tilGoalTarget.error =
                         getString(R.string.goal_target_error_max, maxGoalDate.format(targetFormatter))
@@ -498,6 +477,11 @@ class AimFragment : Fragment() {
         }
 
         dialog.show()
+    }
+
+    private fun showGoalDetailDialog(goal: GoalRowUiModel) {
+        val args = Bundle().apply { putString("goalId", goal.id) }
+        findNavController().navigate(R.id.action_aimFragment_to_goalDetailFragment, args)
     }
 
     override fun onDestroyView() {

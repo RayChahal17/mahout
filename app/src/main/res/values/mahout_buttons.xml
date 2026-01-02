@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      Mahout Buttons — Premium B (Obsidian + Gold)
+
+      CRITICAL RULE:
+      - Buttons inside MaterialButtonToggleGroup MUST NOT set android:background.
+      - Use backgroundTint + strokeColor + rippleColor instead.
+
+      Back-compat:
+      - Some layouts reference older style names like PillPrimary2.
+        We keep them as aliases so the app compiles without editing layouts yet.
+    -->
+
+    <!-- =========================
+         ToggleGroup-safe outlined style (NEW)
+         Used by fragment_path.xml via ?attr/materialButtonOutlinedStyle
+         ========================= -->
+    <style name="Widget.Mahout.Button.Toggle.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <!-- IMPORTANT: do NOT set android:background here -->
+
+        <item name="android:minHeight">40dp</item>
+        <item name="android:textAllCaps">false</item>
+
+        <!-- Premium sizing + typography -->
+        <item name="android:textAppearance">@style/TextAppearance.Mahout.LabelL</item>
+        <item name="android:textColor">@color/mahout_toggle_text</item>
+
+        <!-- Premium surfaces -->
+        <item name="backgroundTint">@color/mahout_toggle_bg</item>
+        <item name="strokeColor">@color/mahout_toggle_stroke</item>
+        <item name="strokeWidth">@dimen/mahout_stroke_1</item>
+
+        <!-- Rounded corners (ToggleGroup reads ShapeAppearanceModel safely) -->
+        <item name="cornerRadius">@dimen/mahout_radius_button</item>
+
+        <!-- Calm ripple -->
+        <item name="rippleColor">@color/mahout_outline_soft</item>
+    </style>
+
+    <!-- =========================
+         Premium Defaults (still OK for normal buttons)
+         These DO overwrite backgrounds; DO NOT use in ToggleGroups.
+         ========================= -->
+
+    <style name="Widget.Mahout.Button.Primary" parent="Widget.Material3.Button">
+        <item name="android:background">@drawable/selector_mahout_button_primary</item>
+        <item name="backgroundTint">@null</item>
+
+        <item name="android:minHeight">@dimen/mahout_btn_height</item>
+        <item name="android:paddingStart">@dimen/mahout_btn_padding_h</item>
+        <item name="android:paddingEnd">@dimen/mahout_btn_padding_h</item>
+        <item name="android:textAllCaps">false</item>
+
+        <item name="android:textColor">@color/mahout_on_accent</item>
+        <item name="android:textAppearance">@style/TextAppearance.Mahout.LabelL</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+    <style name="Widget.Mahout.Button.Secondary" parent="Widget.Material3.Button">
+        <item name="android:background">@drawable/selector_mahout_button_secondary</item>
+        <item name="backgroundTint">@null</item>
+
+        <item name="android:minHeight">@dimen/mahout_btn_height</item>
+        <item name="android:paddingStart">@dimen/mahout_btn_padding_h</item>
+        <item name="android:paddingEnd">@dimen/mahout_btn_padding_h</item>
+        <item name="android:textAllCaps">false</item>
+
+        <item name="android:textColor">@color/mahout_text_primary</item>
+        <item name="android:textAppearance">@style/TextAppearance.Mahout.LabelL</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+    <!-- =========================
+         Existing styles (compat)
+         ========================= -->
+
+    <style name="Widget.Mahout.Button.PillPrimary" parent="Widget.Material3.Button">
+        <item name="android:background">@drawable/selector_mahout_pill_primary</item>
+        <item name="backgroundTint">@null</item>
+
+        <item name="android:minHeight">@dimen/mahout_btn_height</item>
+        <item name="android:paddingStart">@dimen/mahout_btn_padding_h</item>
+        <item name="android:paddingEnd">@dimen/mahout_btn_padding_h</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/mahout_on_accent</item>
+        <item name="android:textAppearance">@style/TextAppearance.Mahout.LabelL</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+    <!-- Back-compat alias -->
+    <style name="Widget.Mahout.Button.PillPrimary2" parent="Widget.Mahout.Button.PillPrimary" />
+
+    <style name="Widget.Mahout.Button.PillNeutral" parent="Widget.Material3.Button">
+        <item name="android:background">@drawable/ripple_mahout_pill_neutral</item>
+        <item name="backgroundTint">@null</item>
+
+        <item name="android:minHeight">@dimen/mahout_btn_height</item>
+        <item name="android:paddingStart">@dimen/mahout_btn_padding_h</item>
+        <item name="android:paddingEnd">@dimen/mahout_btn_padding_h</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/mahout_text_primary</item>
+        <item name="android:textAppearance">@style/TextAppearance.Mahout.LabelL</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+    <style name="Widget.Mahout.Button.PillMutedSmall" parent="Widget.Material3.Button">
+        <item name="android:background">@drawable/ripple_mahout_pill_muted</item>
+        <item name="backgroundTint">@null</item>
+
+        <item name="android:minHeight">32dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/mahout_text_primary</item>
+        <item name="android:textAppearance">@style/TextAppearance.Mahout.LabelS</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+    <style name="Widget.Mahout.Button.PillOutlineSmall" parent="Widget.Material3.Button">
+        <item name="android:background">@drawable/ripple_mahout_pill_outline</item>
+        <item name="backgroundTint">@null</item>
+
+        <item name="android:minHeight">26dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingBottom">6dp</item>
+
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/mahout_text_primary</item>
+        <item name="android:textAppearance">@style/TextAppearance.Mahout.LabelS</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+    <style name="Widget.Mahout.IconButton.RoundSquarePurple" parent="Widget.Material3.Button">
+        <item name="android:background">@drawable/ripple_mahout_round_square_purple</item>
+        <item name="android:minWidth">44dp</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:padding">0dp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+</resources>

@@ -45,7 +45,6 @@ class PauseTimerUseCase @Inject constructor(
             TimerState(
                 status = TimerStatus.PAUSED,
                 actionId = state.actionId,
-                currentSessionId = null,
                 accumulatedMillis = state.accumulatedMillis + segmentMillis,
                 updatedAt = now
             )

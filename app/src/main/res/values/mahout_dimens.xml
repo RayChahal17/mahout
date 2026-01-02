@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mahout Dimens — Premium B -->
+
+    <!-- Corner radii (LOCK THESE to avoid random rounding across the app) -->
+    <dimen name="mahout_radius_pill">999dp</dimen>
+    <dimen name="mahout_radius_chip">999dp</dimen>
+
+    <dimen name="mahout_radius_card">24dp</dimen>    <!-- upgraded from 18dp -->
+    <dimen name="mahout_radius_sheet">28dp</dimen>
+    <dimen name="mahout_radius_button">16dp</dimen>
+    <dimen name="mahout_radius_input">16dp</dimen>
+
+    <!-- Strokes -->
+    <dimen name="mahout_stroke_1">1dp</dimen>
+
+    <!-- Spacing tokens (use these to get the “premium rhythm”) -->
+    <dimen name="mahout_space_8">8dp</dimen>
+    <dimen name="mahout_space_12">12dp</dimen>
+    <dimen name="mahout_space_16">16dp</dimen>
+    <dimen name="mahout_space_24">24dp</dimen>
+    <dimen name="mahout_space_32">32dp</dimen>
+
+    <!-- Button heights -->
+    <dimen name="mahout_btn_height">48dp</dimen>
+    <dimen name="mahout_btn_height_small">36dp</dimen>
+
+    <!-- Horizontal padding -->
+    <dimen name="mahout_btn_padding_h">18dp</dimen>
+
+    <dimen name="timeline_viewport_height">300dp</dimen>
+
+    <!-- Bottom navigation (minimal) -->
+    <dimen name="bottom_nav_icon_size">22dp</dimen>
+
+</resources>

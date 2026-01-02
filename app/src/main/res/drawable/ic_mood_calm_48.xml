@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="56"
+    android:viewportHeight="56">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#4A4A4A"
+        android:strokeWidth="2.5"
+        android:pathData="M28,4a24,24 0 1,0 0,48a24,24 0 1,0 0,-48z" />
+    <!-- Closed eyes -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#4A4A4A"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M20,24c2,-1 4,-1 6,0" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#4A4A4A"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M30,24c2,-1 4,-1 6,0" />
+    <!-- Gentle smile -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#4A4A4A"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M21,33c2,2 5,3 7,3s5,-1 7,-3" />
+</vector>
+

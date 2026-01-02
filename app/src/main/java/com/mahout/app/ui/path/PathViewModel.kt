@@ -76,6 +76,20 @@ class PathViewModel @Inject constructor(
         observeActiveGoalsUseCase()
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    // Map actionId -> linked Goal for quick lookup in UI
+    // Uses active links to efficiently map actions to goals
+    val linkedGoalsByActionId: StateFlow<Map<String, Goal>> =
+        combine(
+            actionGoalLinkRepository.observeActiveLinks(),
+            activeGoals
+        ) { links, goals ->
+            val goalById = goals.associateBy { it.id }
+            links.associate { it.actionId to goalById[it.goalId] }
+                .filterValues { it != null }
+                .mapValues { it.value!! }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
     val timerState: StateFlow<TimerState> =
         observeTimerStateUseCase()
             .stateIn(
@@ -373,7 +387,9 @@ class PathViewModel @Inject constructor(
 
                 val actionTitle = titleById[s.actionId] ?: "Action"
                 val startLocal = floorToMinute(clampedStart)
-                val endLocal = ceilToMinute(clampedEnd)
+                val endLocal = floorToMinute(clampedEnd).let { end ->
+                    if (end == startLocal) end.plusMinutes(1) else end
+                }
 
                 TimelineBlock(
                     id = s.id,

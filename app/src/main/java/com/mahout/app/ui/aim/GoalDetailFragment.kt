@@ -1,79 +1,98 @@
 package com.mahout.app.ui.aim
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import androidx.core.view.isVisible
+import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mahout.app.R
 import com.mahout.app.databinding.FragmentGoalDetailBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @AndroidEntryPoint
-class GoalDetailFragment : Fragment() {
+class GoalDetailFragment : Fragment(R.layout.fragment_goal_detail) {
 
     private var _binding: FragmentGoalDetailBinding? = null
     private val binding get() = _binding!!
 
     private val viewModel: GoalDetailViewModel by viewModels()
 
-    private val formatter = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        _binding = FragmentGoalDetailBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    private lateinit var linkedAdapter: LinkedActionsAdapter
+    private lateinit var receiptAdapter: GoalReceiptAdapter
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        _binding = FragmentGoalDetailBinding.bind(view)
 
-        // Use AppCompat built-in back icon (no new drawable needed).
-        binding.toolbar.title = getString(R.string.goal_detail_title)
-        binding.toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
-        binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
+        // Ensure toolbar back button is enabled
+        (requireActivity() as? androidx.appcompat.app.AppCompatActivity)?.supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        
+        // Handle system back button press
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                findNavController().navigateUp()
+            }
+        })
+
+        linkedAdapter = LinkedActionsAdapter { actionId, title ->
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Unlink action?")
+                .setMessage("Unlink \"$title\" from this goal? You can link it again later.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Unlink") { _, _ -> viewModel.unlinkAction(actionId) }
+                .show()
+        }
+        binding.rvLinkedActions.adapter = linkedAdapter
+
+        receiptAdapter = GoalReceiptAdapter()
+        binding.rvReceipts.adapter = receiptAdapter
+
+        binding.btnLinkAction.setOnClickListener {
+            val options = viewModel.linkableActions.value
+            if (options.isEmpty()) {
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("No actions available")
+                    .setMessage("Create an action in Path first, then link it here.")
+                    .setPositiveButton("OK", null)
+                    .show()
+                return@setOnClickListener
+            }
+
+            val titles = options.map { it.title }.toTypedArray()
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Link an action")
+                .setItems(titles) { _, which ->
+                    viewModel.linkAction(options[which].actionId)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    viewModel.state.collect { state ->
-                        binding.progress.isVisible = state is GoalDetailUiState.Loading
-                        binding.contentGroup.isVisible = state is GoalDetailUiState.Content
-                        binding.notFoundGroup.isVisible = state is GoalDetailUiState.NotFound
-
-                        when (state) {
-                            GoalDetailUiState.Loading -> Unit
-                            GoalDetailUiState.NotFound -> Unit
-                            is GoalDetailUiState.Content -> {
-                                val g = state.goal
-                                binding.tvTitle.text = g.title
-                                binding.tvWhy.isVisible = !g.why.isNullOrBlank()
-                                binding.tvWhy.text = g.why.orEmpty()
-
-                                binding.tvMeta.text = buildString {
-                                    append(g.horizon.name.replace('_', ' '))
-                                    if (g.targetDate != null) {
-                                        append(" • Target ")
-                                        append(g.targetDate.format(formatter))
-                                    }
-                                    if (g.status.name == "ARCHIVED") {
-                                        append(" • Archived")
-                                    }
-                                }
-
-                                // Placeholder receipts panel (Day 11 requirement)
-                                binding.tvReceiptsTitle.text = getString(R.string.goal_detail_receipts_title)
-                                binding.tvReceiptsBody.text = getString(R.string.goal_detail_receipts_body)
-                            }
-                        }
+                    viewModel.uiState.collect { state ->
+                        binding.tvGoalWhy.text = state.goalWhy ?: ""
+                        binding.tvGoalWhy.visibility = if (state.goalWhy.isNullOrBlank()) View.GONE else View.VISIBLE
+                        linkedAdapter.submitList(state.linkedActions)
+                        receiptAdapter.submitList(state.receipts)
+                        
+                        // Update toolbar title (removed duplicate title from fragment content)
+                        (requireActivity() as? androidx.appcompat.app.AppCompatActivity)?.supportActionBar?.title = state.goalTitle
+                    }
+                }
+                launch {
+                    viewModel.events.collect { msg ->
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setMessage(msg)
+                            .setPositiveButton("OK", null)
+                            .show()
                     }
                 }
             }

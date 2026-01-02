@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="mahout_chip_bg">@color/mahout_surface</color>
+    <color name="mahout_chip_stroke">@color/mahout_outline_soft</color>
+    <color name="mahout_chip_text">@color/mahout_text_primary</color>
+</resources>
+

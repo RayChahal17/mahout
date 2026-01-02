@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="56"
+    android:viewportHeight="56">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#4A4A4A"
+        android:strokeWidth="2.5"
+        android:pathData="M28,4a24,24 0 1,0 0,48a24,24 0 1,0 0,-48z" />
+    <!-- Eyes (small, higher) -->
+    <path
+        android:fillColor="#4A4A4A"
+        android:pathData="M21,21a1.6,1.6 0 1,0 3.2,0a1.6,1.6 0 1,0 -3.2,0z" />
+    <path
+        android:fillColor="#4A4A4A"
+        android:pathData="M31.8,21a1.6,1.6 0 1,0 3.2,0a1.6,1.6 0 1,0 -3.2,0z" />
+    <!-- Wavy mouth -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#4A4A4A"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M20,34c3,-3 5,3 8,0c3,-3 5,3 8,0" />
+</vector>
+

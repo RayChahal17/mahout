@@ -167,11 +167,16 @@ class ActionListAdapter(
                 ColorUtils.setAlphaComponent(accent, if (row.timerButtonEnabled) 0x18 else 0x10)
             )
 
+            // --- Linked goal info ---
+            binding.tvLinkedGoal.isVisible = !row.linkedGoalText.isNullOrBlank()
+            binding.tvLinkedGoal.text = row.linkedGoalText.orEmpty()
+
             // --- Compact / expanded ---
             val compact = (cardSizeProvider() == CardSize.COMPACT)
             binding.tvActionMeta.isVisible = !compact
             binding.pbProgress.isVisible = !compact
             binding.tvProgressLabel.isVisible = !compact
+            binding.tvLinkedGoal.isVisible = !compact && !row.linkedGoalText.isNullOrBlank()
 
             // --- Clicks ---
             binding.root.setOnClickListener { onClick(action) }
@@ -216,7 +221,8 @@ sealed class PathRow {
         val progressLabel: String,
         val timerButtonText: String,
         val timerButtonEnabled: Boolean,
-        val isOverTarget: Boolean
+        val isOverTarget: Boolean,
+        val linkedGoalText: String? = null // e.g., "Learn AI (2-5y)"
     ) : PathRow()
 
     data class MessageRow(

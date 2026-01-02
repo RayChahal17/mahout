@@ -1,43 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!--
-      WHY THIS FILE EXISTS:
-      Some XML in the project references:
-        @style/ShapeAppearanceOverlay
-        @style/ShapeAppearanceOverlay.Mahout
-        @style/ShapeAppearanceOverlay.Mahout.Corner
-      If ANY one of these names is missing, AAPT fails.
-
-      We define ALL of them as standalone styles (no parent="...") to avoid
-      missing Material2/Material3 parent styles.
-    -->
-
-    <!-- ✅ Missing right now according to your error -->
-    <style name="ShapeAppearanceOverlay">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">16dp</item>
-    </style>
-
-    <!-- ✅ Also provide this common alias -->
-    <style name="ShapeAppearanceOverlay.Corner">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">16dp</item>
-    </style>
-
-    <!-- ✅ Mahout base -->
-    <style name="ShapeAppearanceOverlay.Mahout">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">16dp</item>
-    </style>
-
-    <!-- ✅ Mahout corner base -->
-    <style name="ShapeAppearanceOverlay.Mahout.Corner">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">16dp</item>
-    </style>
-
-    <!-- Size variants -->
+    <!-- Rounded corners: reusable overlays -->
     <style name="ShapeAppearanceOverlay.Mahout.Corner.Small">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">8dp</item>
@@ -45,17 +9,15 @@
 
     <style name="ShapeAppearanceOverlay.Mahout.Corner.Medium">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">12dp</item>
+        <item name="cornerSize">16dp</item>
     </style>
 
     <style name="ShapeAppearanceOverlay.Mahout.Corner.Large">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">20dp</item>
-    </style>
-
-    <style name="ShapeAppearanceOverlay.Mahout.Corner.ExtraLarge">
-        <item name="cornerFamily">rounded</item>
         <item name="cornerSize">24dp</item>
     </style>
 
+    <!-- Default fallback for references -->
+    <style name="ShapeAppearanceOverlay.Mahout.Corner"
+        parent="ShapeAppearanceOverlay.Mahout.Corner.Medium" />
 </resources>

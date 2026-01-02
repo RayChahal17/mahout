@@ -2,55 +2,190 @@
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="@dimen/spacing_12"
-    app:cardCornerRadius="16dp"
-    app:cardUseCompatPadding="true">
+    app:cardUseCompatPadding="true"
+    app:cardElevation="6dp"
+    app:cardCornerRadius="22dp"
+    app:cardBackgroundColor="@color/mahout_premium_surface"
+    app:strokeColor="@color/mahout_premium_outline"
+    app:strokeWidth="1dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="@dimen/spacing_16">
 
+        <!-- Optional icon -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardGoalIcon"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            app:cardCornerRadius="26dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/mahout_premium_surface_alt"
+            app:strokeColor="@color/mahout_premium_outline"
+            app:strokeWidth="1dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:id="@+id/ivGoalIcon"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="12dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_bars_24"
+                tools:ignore="ContentDescription"/>
+        </com.google.android.material.card.MaterialCardView>
+
         <TextView
             android:id="@+id/tvGoalTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
+            android:layout_marginStart="@dimen/spacing_12"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:textColor="@color/mahout_premium_ink_primary"
+            android:maxLines="2"
+            android:ellipsize="end"
+            app:layout_constraintStart_toEndOf="@id/cardGoalIcon"
+            app:layout_constraintTop_toTopOf="@id/cardGoalIcon"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="Read 20 Business Books"/>
 
         <TextView
             android:id="@+id/tvGoalWhy"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_8"
-            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+            android:layout_marginStart="@dimen/spacing_12"
+            android:layout_marginTop="2dp"
+            android:textSize="12sp"
+            android:textColor="@color/mahout_premium_ink_secondary"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:visibility="gone"
+            app:layout_constraintStart_toEndOf="@id/cardGoalIcon"
             app:layout_constraintTop_toBottomOf="@id/tvGoalTitle"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="Linked 1 • Read a book"
+            tools:visibility="visible"/>
+
+        <TextView
+            android:id="@+id/tvGoalLinkedSummary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_8"
+            android:textSize="12sp"
+            android:textColor="@color/mahout_premium_ink_secondary"
+            app:layout_constraintStart_toStartOf="@id/tvGoalTitle"
+            app:layout_constraintTop_toBottomOf="@id/tvGoalWhy"
+            tools:text="Linked 3"/>
+
+        <TextView
+            android:id="@+id/tvGoalActiveDays"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_8"
+            android:textSize="12sp"
+            android:textColor="@color/mahout_premium_ink_secondary"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintBaseline_toBaselineOf="@id/tvGoalLinkedSummary"
+            app:layout_constraintStart_toEndOf="@id/tvGoalLinkedSummary"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="• Active 4/7 days • Last Today"/>
+
+        <TextView
+            android:id="@+id/tvGoalWeeklyStats"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textSize="12sp"
+            android:textColor="@color/mahout_premium_ink_secondary"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintStart_toStartOf="@id/tvGoalTitle"
+            app:layout_constraintTop_toBottomOf="@id/tvGoalLinkedSummary"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="This week 1h 20m • Checks 2"/>
+
+        <ProgressBar
+            android:id="@+id/pbGoalProgress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="6dp"
+            android:layout_marginTop="@dimen/spacing_12"
+            android:max="100"
+            android:progress="45"
+            android:progressTint="@color/mahout_premium_accent"
+            android:progressBackgroundTint="@color/mahout_premium_progress_track"
+            app:layout_constraintTop_toBottomOf="@id/tvGoalWeeklyStats"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
 
+        <TextView
+            android:id="@+id/tvGoalProgressLabel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_8"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="@color/mahout_premium_ink_tertiary"
+            app:layout_constraintTop_toBottomOf="@id/pbGoalProgress"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="Weekly Consistency 45%"/>
+
         <com.google.android.material.chip.Chip
             android:id="@+id/chipGoalHorizon"
+            style="@style/MahoutChipOutlined"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_12"
-            android:text="horizon"
-            app:layout_constraintTop_toBottomOf="@id/tvGoalWhy"
-            app:layout_constraintStart_toStartOf="parent"/>
+            android:layout_marginTop="@dimen/spacing_10"
+            android:text="This month"
+            app:chipBackgroundColor="@color/mahout_premium_surface"
+            app:chipStrokeColor="@color/mahout_premium_outline_strong"
+            app:chipStrokeWidth="1dp"
+            android:textColor="@color/mahout_premium_ink_secondary"
+            app:layout_constraintTop_toBottomOf="@id/tvGoalProgressLabel"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:ignore="HardcodedText"/>
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipGoalTarget"
+            style="@style/MahoutChipOutlined"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_12"
-            android:layout_marginStart="@dimen/spacing_8"
-            android:text="target"
-            android:visibility="gone"
-            app:layout_constraintTop_toBottomOf="@id/tvGoalWhy"
-            app:layout_constraintStart_toEndOf="@id/chipGoalHorizon"/>
+            android:layout_marginTop="@dimen/spacing_10"
+            android:layout_marginStart="@dimen/spacing_10"
+            android:text="Due Dec 25, 2025"
+            app:chipBackgroundColor="@color/mahout_premium_surface"
+            app:chipStrokeColor="@color/mahout_premium_outline_strong"
+            app:chipStrokeWidth="1dp"
+            android:textColor="@color/mahout_premium_ink_secondary"
+            app:layout_constraintBaseline_toBaselineOf="@id/chipGoalHorizon"
+            app:layout_constraintStart_toEndOf="@id/chipGoalHorizon"
+            tools:ignore="HardcodedText"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipGoalStatus"
+            style="@style/MahoutChipOutlined"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_10"
+            android:text="In progress"
+            app:chipBackgroundColor="@color/mahout_premium_surface"
+            app:chipStrokeColor="@color/mahout_premium_outline_strong"
+            app:chipStrokeWidth="1dp"
+            android:textColor="@color/mahout_premium_ink_secondary"
+            app:layout_constraintBaseline_toBaselineOf="@id/chipGoalHorizon"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:ignore="HardcodedText"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
 </com.google.android.material.card.MaterialCardView>

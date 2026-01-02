@@ -17,6 +17,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.timepicker.MaterialTimePicker
@@ -44,6 +45,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import androidx.viewbinding.ViewBinding
+import androidx.core.view.isVisible
 
 @AndroidEntryPoint
 class PathFragment : Fragment() {
@@ -58,6 +61,7 @@ class PathFragment : Fragment() {
     private var latestActions: List<Action> = emptyList()
     private var latestTimerState: TimerState? = null
     private var isActionsMode: Boolean = true
+    private var latestLinkedGoals: Map<String, com.mahout.app.domain.aim.model.Goal> = emptyMap()
 
     private var uiTickerJob: Job? = null
 
@@ -66,6 +70,8 @@ class PathFragment : Fragment() {
 
     // Day 13 totals: actionId -> total millis in cadence window
     private var latestTotalsByActionId: Map<String, Long> = emptyMap()
+
+    private var wasTimerTrayVisible: Boolean = false
 
     // Timeline cache
     private var latestTimelineDate: LocalDate = LocalDate.now(ZoneId.systemDefault())
@@ -115,7 +121,15 @@ class PathFragment : Fragment() {
             override fun onRequestDate(date: LocalDate) = viewModel.requestTimelineDate(date)
             override fun onBackToToday() = viewModel.backToToday()
             override fun onLogTime(date: LocalDate) = showLogTimeDialog(date)
-            override fun onStats(date: LocalDate) = binding.root.showSnackbar("Stats coming soon.")
+            override fun onStats(date: LocalDate) {
+                val bundle = Bundle().apply {
+                    putString("selectedDate", date.toString())
+                }
+                findNavController().navigate(
+                    com.mahout.app.R.id.action_pathFragment_to_pathInsightsFragment,
+                    bundle
+                )
+            }
         })
 
         adapter = ActionListAdapter(
@@ -192,6 +206,13 @@ class PathFragment : Fragment() {
                         latestTotalsByActionId = map
                         rebuildRows()
                         latestTimerState?.let { renderTimerTray(it) }
+                    }
+                }
+
+                launch {
+                    viewModel.linkedGoalsByActionId.collect { map ->
+                        latestLinkedGoals = map
+                        rebuildRows()
                     }
                 }
 
@@ -307,6 +328,17 @@ class PathFragment : Fragment() {
             }
         }
 
+        // Format linked goal text: "Goal Title (horizon)"
+        val linkedGoalText = latestLinkedGoals[action.id]?.let { goal ->
+            val horizonText = when (goal.horizon) {
+                com.mahout.app.domain.aim.model.GoalHorizon.THIS_MONTH -> "30d"
+                com.mahout.app.domain.aim.model.GoalHorizon.NEARTERM -> "1-6m"
+                com.mahout.app.domain.aim.model.GoalHorizon.MIDTERM -> "6-24m"
+                com.mahout.app.domain.aim.model.GoalHorizon.LONGTERM -> "2-10y"
+            }
+            "${goal.title} ($horizonText)"
+        }
+
         return PathRow.ActionRow(
             action = action,
             metaText = metaText,
@@ -314,7 +346,8 @@ class PathFragment : Fragment() {
             progressLabel = progressLabel,
             timerButtonText = timerButtonText,
             timerButtonEnabled = timerEnabled,
-            isOverTarget = isOverTarget
+            isOverTarget = isOverTarget,
+            linkedGoalText = linkedGoalText
         )
     }
 
@@ -345,60 +378,21 @@ class PathFragment : Fragment() {
     private fun renderTimerTray(state: TimerState) {
         val tray = binding.timerTray
 
-        val show = state.status == TimerStatus.RUNNING || state.status == TimerStatus.PAUSED
-        tray.root.isVisible = show
-        if (!show) return
-
-        val actionTitle = state.actionId
-            ?.let { id -> latestActions.firstOrNull { it.id == id }?.title }
-            ?: "Unknown action"
-        tray.tvTrayActionTitle.text = actionTitle
-
-        tray.btnTrayStop.setOnClickListener {
-            handleTimerResult(timerController.stop(), actionIdForRetry = null)
+        val visible = state.status != TimerStatus.STOPPED && state.actionId != null
+        tray.root.isVisible = visible
+        if (visible) {
+            tray.tvTrayElapsed.text = state.elapsedText
+            tray.tvTrayActionTitle.text = state.actionName
+            tray.pbTrayProgress.progress = state.progress
         }
 
-        when (state.status) {
-            TimerStatus.RUNNING -> {
-                tray.btnTrayPauseResume.text = "Pause"
-                tray.btnTrayPauseResume.setOnClickListener {
-                    handleTimerResult(timerController.pause(), actionIdForRetry = null)
-                }
-            }
-            TimerStatus.PAUSED -> {
-                tray.btnTrayPauseResume.text = "Resume"
-                tray.btnTrayPauseResume.setOnClickListener {
-                    handleTimerResult(timerController.resume(), actionIdForRetry = null)
-                }
-            }
-            else -> Unit
-        }
-
-        val totalMillis = computeTimerTotalMillis(state)
-        val d = Duration.ofMillis(totalMillis)
-        val hours = d.toHours()
-        val minutes = (d.toMinutes() % 60)
-        val seconds = (d.seconds % 60)
-
-        tray.tvTrayElapsed.text = if (hours > 0) {
-            String.format("%d:%02d:%02d", hours, minutes, seconds)
-        } else {
-            String.format("%02d:%02d", minutes, seconds)
-        }
-
-        val targetMinutes = state.actionId
-            ?.let { id -> latestActions.firstOrNull { it.id == id }?.targetValue }
-            ?: 0
-        val targetMs = if (targetMinutes > 0) TimeUnit.MINUTES.toMillis(targetMinutes.toLong()) else 0L
-
-        val pct =
-            if (targetMs > 0L) {
-                ((minOf(totalMillis, targetMs) * 100L) / targetMs).toInt().coerceIn(0, 100)
-            } else 0
-
-        tray.pbTrayProgress.progress = pct
-        tray.tvTrayProgressLabel.text = buildProgressLabel(totalMillis, targetMs)
+        // Fade background cards when visible
+        val behindAlpha = if (tray.root.isVisible) 0.35f else 1f
+        binding.rvActions.alpha = behindAlpha
+        binding.emptyState.root.alpha = behindAlpha
     }
+
+
 
     private fun onActionTimerClick(action: Action) {
         val state = latestTimerState
@@ -696,6 +690,13 @@ class PathFragment : Fragment() {
             hours > 0 -> "${hours}h ${minutes}m ${seconds}s"
             minutes > 0 -> "${minutes}m ${seconds}s"
             else -> "${seconds}s"
+        }
+    }
+
+    private fun setAlphaCompat(target: Any?, value: Float) {
+        when (target) {
+            is View -> target.alpha = value
+            is ViewBinding -> target.root.alpha = value
         }
     }
 

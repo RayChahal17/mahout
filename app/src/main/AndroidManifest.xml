@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Networking for debug logging and API calls. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Required to run a ForegroundService (reliable timer). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
@@ -17,11 +20,13 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.Mahout">
         <activity
             android:name=".ui.MainActivity"
-            android:exported="true">
-            <intent-filter>
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+        <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>

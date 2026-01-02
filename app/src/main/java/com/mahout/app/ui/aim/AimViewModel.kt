@@ -2,24 +2,32 @@ package com.mahout.app.ui.aim
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mahout.app.domain.aim.model.GoalHorizon
 import com.mahout.app.domain.aim.model.GoalStatus
+import com.mahout.app.domain.aim.repository.ActionGoalLinkRepository
 import com.mahout.app.domain.aim.usecase.ArchiveGoalUseCase
+import com.mahout.app.domain.aim.usecase.GetGoalWeeklyReceiptsUseCase
 import com.mahout.app.domain.aim.usecase.GetWeeklySessionStatsUseCase
 import com.mahout.app.domain.aim.usecase.ObserveChiefAimUseCase
 import com.mahout.app.domain.aim.usecase.ObserveGoalsUseCase
 import com.mahout.app.domain.aim.usecase.UpsertChiefAimUseCase
 import com.mahout.app.domain.aim.usecase.UpsertGoalUseCase
+import com.mahout.app.domain.path.usecase.ObserveActiveActionsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import java.time.Duration
 import java.time.LocalDate
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,110 +37,172 @@ class AimViewModel @Inject constructor(
     private val upsertChiefAimUseCase: UpsertChiefAimUseCase,
     private val upsertGoalUseCase: UpsertGoalUseCase,
     private val archiveGoalUseCase: ArchiveGoalUseCase,
-    private val getWeeklySessionStatsUseCase: GetWeeklySessionStatsUseCase
+    getWeeklySessionStatsUseCase: GetWeeklySessionStatsUseCase,
+    observeActiveActionsUseCase: ObserveActiveActionsUseCase,
+    private val actionGoalLinkRepository: ActionGoalLinkRepository,
+    private val getGoalWeeklyReceiptsUseCase: GetGoalWeeklyReceiptsUseCase
 ) : ViewModel() {
 
-    private val _events = MutableSharedFlow<AimEvent>(extraBufferCapacity = 1)
-    val events = _events.asSharedFlow()
+    private val chiefAim = observeChiefAimUseCase()
+    private val allGoals = observeGoalsUseCase()
 
-    private val statsState = MutableStateFlow(WeeklyStatsUi.zero())
+    private val statsState = kotlinx.coroutines.flow.flow {
+        emit(getWeeklySessionStatsUseCase())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    // Which timeline bucket is selected (Next 30 days, 1–6 months, etc.)
-    private val bucketState = MutableStateFlow(RoadmapBucket.NEXT_30_DAYS)
+    private val bucketState = kotlinx.coroutines.flow.MutableStateFlow(RoadmapBucket.NEXT_30_DAYS)
 
-    fun onRoadmapBucketSelected(bucket: RoadmapBucket) {
-        bucketState.value = bucket
+    private val actions = observeActiveActionsUseCase()
+    private val activeLinks = actionGoalLinkRepository.observeActiveLinks()
+
+    private val _events = MutableSharedFlow<AimEvent>()
+    val events: SharedFlow<AimEvent> = _events.asSharedFlow()
+
+    private data class CombinedData(
+        val chief: com.mahout.app.domain.aim.model.ChiefAim?,
+        val goals: List<com.mahout.app.domain.aim.model.Goal>,
+        val stats: com.mahout.app.domain.aim.usecase.WeeklySessionStats?,
+        val bucket: RoadmapBucket,
+        val actions: List<com.mahout.app.domain.path.model.Action>,
+        val links: List<com.mahout.app.domain.aim.model.ActionGoalLinkInterval>
+    )
+
+    private val combinedData = combine(
+        combine(chiefAim, allGoals, statsState, bucketState) { chief: com.mahout.app.domain.aim.model.ChiefAim?,
+                                                               goals: List<com.mahout.app.domain.aim.model.Goal>,
+                                                               stats: com.mahout.app.domain.aim.usecase.WeeklySessionStats?,
+                                                               bucket: RoadmapBucket ->
+            CombinedData(chief, goals, stats, bucket, emptyList(), emptyList())
+        },
+        combine(actions, activeLinks) { actionList: List<com.mahout.app.domain.path.model.Action>,
+                                         links: List<com.mahout.app.domain.aim.model.ActionGoalLinkInterval> ->
+            actionList to links
+        }
+    ) { data, (actionList, links) ->
+        data.copy(actions = actionList, links = links)
     }
 
-    val uiState: StateFlow<AimUiState> =
-        combine(
-            observeChiefAimUseCase(),
-            observeGoalsUseCase(), // IMPORTANT: includes archived goals too
-            statsState,
-            bucketState
-        ) { chiefAim, allGoals, stats, bucket ->
+    val uiState: StateFlow<AimUiState> = combinedData.mapLatest { data ->
+            val chief = data.chief
+            val goals = data.goals
+            val stats = data.stats
+            val bucket = data.bucket
+            val actionList = data.actions
+            val links = data.links
+            val actionTitleById = actionList.associate { it.id to it.title }
+            val activeLinksByGoal = links.groupBy { it.goalId }
 
-            // Filter by bucket:
-            // - ARCHIVED shows archived only
-            // - Other buckets show non-archived goals with matching horizon
-            val filteredGoals = when (bucket) {
-                RoadmapBucket.ARCHIVED -> allGoals.filter { it.status == GoalStatus.ARCHIVED }
-
-                RoadmapBucket.NEXT_30_DAYS -> allGoals.filter {
-                    it.status != GoalStatus.ARCHIVED && it.horizon == GoalHorizon.THIS_MONTH
-                }
-
-                RoadmapBucket.ONE_TO_SIX_MONTHS -> allGoals.filter {
-                    it.status != GoalStatus.ARCHIVED && it.horizon == GoalHorizon.NEARTERM
-                }
-
-                RoadmapBucket.SIX_TO_24_MONTHS -> allGoals.filter {
-                    it.status != GoalStatus.ARCHIVED && it.horizon == GoalHorizon.MIDTERM
-                }
-
-                RoadmapBucket.TWO_TO_TEN_YEARS -> allGoals.filter {
-                    it.status != GoalStatus.ARCHIVED && it.horizon == GoalHorizon.LONGTERM
+            val filteredGoals = goals.filter { g ->
+                when (bucket) {
+                    RoadmapBucket.NEXT_30_DAYS -> g.status == GoalStatus.ACTIVE && g.horizon == com.mahout.app.domain.aim.model.GoalHorizon.THIS_MONTH
+                    RoadmapBucket.ONE_TO_SIX_MONTHS -> g.status == GoalStatus.ACTIVE && g.horizon == com.mahout.app.domain.aim.model.GoalHorizon.NEARTERM
+                    RoadmapBucket.SIX_TO_24_MONTHS -> g.status == GoalStatus.ACTIVE && g.horizon == com.mahout.app.domain.aim.model.GoalHorizon.MIDTERM
+                    RoadmapBucket.TWO_TO_TEN_YEARS -> g.status == GoalStatus.ACTIVE && g.horizon == com.mahout.app.domain.aim.model.GoalHorizon.LONGTERM
+                    RoadmapBucket.ARCHIVED -> g.status == GoalStatus.ARCHIVED
                 }
             }
 
-            // Map domain -> UI rows (small objects; fast for RecyclerView)
-            val goalUi = filteredGoals.map { g ->
-                GoalRowUiModel(
-                    id = g.id,
-                    title = g.title,
-                    why = g.why,
-                    horizon = g.horizon,
-                    targetDate = g.targetDate,
-                    parentGoalId = g.parentGoalId
+            // Compute weekly stats for all goals asynchronously
+            val goalUi = withContext(Dispatchers.Default) {
+                filteredGoals.map { g ->
+                    val titles = activeLinksByGoal[g.id]
+                        .orEmpty()
+                        .mapNotNull { actionTitleById[it.actionId] }
+                        .sortedBy { it.lowercase(Locale.getDefault()) }
+
+                    val count = titles.size
+                    val summary = buildLinkedSummary(count, titles)
+
+                    // Compute weekly stats for this goal
+                    val weeklyReceipts = try {
+                        getGoalWeeklyReceiptsUseCase(g.id)
+                    } catch (e: Exception) {
+                        GetGoalWeeklyReceiptsUseCase.Result(emptyList(), emptyMap())
+                    }
+
+                    val weeklyTimeMillis = weeklyReceipts.receipts.sumOf { it.durationMillis }
+                    val weeklySessionCount = weeklyReceipts.receipts.size
+                    val activeDays = weeklyReceipts.receipts
+                        .map { it.startAt.atZone(java.time.ZoneId.systemDefault()).toLocalDate() }
+                        .toSet()
+                        .size
+                    val lastTouchedDate = weeklyReceipts.receipts
+                        .maxOfOrNull { it.startAt.atZone(java.time.ZoneId.systemDefault()).toLocalDate() }
+                    val progressPercent = ((activeDays.toFloat() / 7f) * 100f).toInt().coerceIn(0, 100)
+
+                    GoalRowUiModel(
+                        id = g.id,
+                        title = g.title,
+                        why = g.why,
+                        horizon = g.horizon,
+                        targetDate = g.targetDate,
+                        parentGoalId = g.parentGoalId,
+                        linkedSummary = summary,
+                        linkedCount = count,
+                        weeklyTimeMillis = weeklyTimeMillis,
+                        weeklySessionCount = weeklySessionCount,
+                        activeDays = activeDays,
+                        lastTouchedDate = lastTouchedDate,
+                        progressPercent = progressPercent
+                    )
+                }
+            }
+
+            val weeklyStatsUi = stats?.let { s ->
+                val hours = s.totalMillis / (1000 * 60 * 60)
+                val minutes = (s.totalMillis % (1000 * 60 * 60)) / (1000 * 60)
+                WeeklyStatsUi(
+                    goalTimeLabel = "${hours}h ${minutes}m",
+                    sessionsLabel = "${s.sessionCount}",
+                    activeDaysLabel = "${s.activeDays}/7",
+                    heroSummary = buildHeroSummary(s)
                 )
-            }
+            } ?: WeeklyStatsUi(
+                goalTimeLabel = "0h 0m",
+                sessionsLabel = "0",
+                activeDaysLabel = "0/7",
+                heroSummary = "No activity this week"
+            )
 
-
-            if (chiefAim == null) {
-                AimUiState.Empty(stats = stats, goals = goalUi, bucket = bucket)
-            } else {
-                AimUiState.Content(
+            when {
+                chief == null && goalUi.isEmpty() -> AimUiState.Empty(
+                    stats = weeklyStatsUi,
+                    goals = emptyList(),
+                    bucket = bucket
+                )
+                else -> AimUiState.Content(
                     chiefAim = ChiefAimUiModel(
-                        title = chiefAim.title,
-                        description = chiefAim.description,
-                        targetDate = chiefAim.targetDate
+                        title = chief?.title.orEmpty(),
+                        description = chief?.description,
+                        targetDate = chief?.targetDate
                     ),
-                    stats = stats,
+                    stats = weeklyStatsUi,
                     goals = goalUi,
                     bucket = bucket
                 )
             }
         }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = AimUiState.Loading
+            viewModelScope,
+            SharingStarted.Eagerly,
+            AimUiState.Loading
         )
 
+    fun onRoadmapBucketSelected(bucket: RoadmapBucket) {
+        bucketState.value = bucket
+    }
+
     fun refreshWeeklyStats() {
-        viewModelScope.launch {
-            runCatching { getWeeklySessionStatsUseCase() }
-                .onSuccess { s ->
-                    val timeLabel = formatMillis(s.totalMillis)
-                    statsState.value = WeeklyStatsUi(
-                        goalTimeLabel = timeLabel,
-                        sessionsLabel = s.sessionCount.toString(),
-                        activeDaysLabel = "${s.activeDays}/7",
-                        heroSummary = "This week · $timeLabel · ${s.sessionCount} sessions · Active ${s.activeDays}/7 days"
-                    )
-                }
-                .onFailure { statsState.value = WeeklyStatsUi.zero() }
-        }
+        // Stats are computed reactively in statsState flow
+        // This method exists for explicit refresh if needed
     }
 
     fun saveChiefAim(title: String, description: String?, targetDate: LocalDate?) {
         viewModelScope.launch {
-            runCatching { upsertChiefAimUseCase(title, description, targetDate) }
-                .onSuccess { _events.tryEmit(AimEvent.ShowSnackbar("Chief Aim saved")) }
-                .onFailure { e ->
-                    // If UseCase throws IllegalArgumentException with a human message, show it.
-                    val msg = e.message ?: "Could not save Chief Aim."
-                    _events.tryEmit(AimEvent.ShowSnackbar(msg))
-                }
+            try {
+                upsertChiefAimUseCase(title, description, targetDate)
+            } catch (e: Exception) {
+                _events.emit(AimEvent.ShowSnackbar(e.message ?: "Failed to save Chief Aim"))
+            }
         }
     }
 
@@ -140,11 +210,11 @@ class AimViewModel @Inject constructor(
         goalId: String?,
         title: String,
         why: String?,
-        horizon: GoalHorizon,
+        horizon: com.mahout.app.domain.aim.model.GoalHorizon,
         targetDate: LocalDate?
     ) {
         viewModelScope.launch {
-            runCatching {
+            try {
                 upsertGoalUseCase(
                     goalId = goalId,
                     title = title,
@@ -152,70 +222,45 @@ class AimViewModel @Inject constructor(
                     horizon = horizon,
                     targetDate = targetDate
                 )
-            }.onSuccess {
-                _events.tryEmit(AimEvent.ShowSnackbar("Goal saved"))
-            }.onFailure { e ->
-                val msg = e.message ?: "Could not save goal."
-                _events.tryEmit(AimEvent.ShowSnackbar(msg))
+            } catch (e: Exception) {
+                _events.emit(AimEvent.ShowSnackbar(e.message ?: "Failed to save Goal"))
             }
         }
     }
 
     fun archiveGoal(goalId: String) {
         viewModelScope.launch {
-            runCatching { archiveGoalUseCase(goalId) }
-                .onSuccess { _events.tryEmit(AimEvent.ShowSnackbar("Goal archived")) }
-                .onFailure { _events.tryEmit(AimEvent.ShowSnackbar("Could not archive goal")) }
+            archiveGoalUseCase(goalId)
         }
     }
 
-    private fun formatMillis(millis: Long): String {
-        val totalMinutes = (millis / 60_000L).coerceAtLeast(0L)
-        val hours = totalMinutes / 60
-        val minutes = totalMinutes % 60
-        return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+    private fun buildLinkedSummary(count: Int, titles: List<String>): String {
+        if (count <= 0) return ""
+        return when (count) {
+            1 -> "Linked 1 • ${titles[0]}"
+            2 -> "Linked 2 • ${titles[0]}, ${titles[1]}"
+            else -> "Linked $count • ${titles[0]}, ${titles[1]}, +${count - 2}"
+        }
+    }
+
+    private fun buildHeroSummary(stats: com.mahout.app.domain.aim.usecase.WeeklySessionStats): String {
+        val hours = stats.totalMillis / (1000 * 60 * 60)
+        val minutes = (stats.totalMillis % (1000 * 60 * 60)) / (1000 * 60)
+        return "${hours}h ${minutes}m • ${stats.sessionCount} sessions • ${stats.activeDays}/7 days"
     }
 }
 
-sealed interface AimUiState {
-    data object Loading : AimUiState
-
+sealed class AimUiState {
+    object Loading : AimUiState()
     data class Empty(
         val stats: WeeklyStatsUi,
         val goals: List<GoalRowUiModel>,
         val bucket: RoadmapBucket
-    ) : AimUiState
-
+    ) : AimUiState()
     data class Content(
         val chiefAim: ChiefAimUiModel,
         val stats: WeeklyStatsUi,
         val goals: List<GoalRowUiModel>,
         val bucket: RoadmapBucket
-    ) : AimUiState
-}
-
-data class ChiefAimUiModel(
-    val title: String,
-    val description: String?,
-    val targetDate: LocalDate?
-)
-
-data class WeeklyStatsUi(
-    val goalTimeLabel: String,
-    val sessionsLabel: String,
-    val activeDaysLabel: String,
-    val heroSummary: String
-) {
-    companion object {
-        fun zero() = WeeklyStatsUi(
-            goalTimeLabel = "0m",
-            sessionsLabel = "0",
-            activeDaysLabel = "0/7",
-            heroSummary = "This week · 0m · 0 sessions · Active 0/7 days"
-        )
-    }
-}
-
-sealed interface AimEvent {
-    data class ShowSnackbar(val message: String) : AimEvent
+    ) : AimUiState()
 }

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      Mahout Components — Premium B (Obsidian + Gold)
+
+      Goal:
+      - Make the “default” Card/Button/Input feel designed and consistent.
+      - Use semantic tokens from mahout_colors.xml so dark mode is automatic.
+
+      Tip:
+      - Later, we’ll hook these into themes.xml so most screens upgrade without touching layouts.
+    -->
+
+    <!-- =========================
+         Cards
+         ========================= -->
+    <style name="Widget.Mahout.Card" parent="Widget.MaterialComponents.CardView">
+        <!-- Luxury cards are mostly “stroke + calm surface”, not heavy shadows -->
+        <item name="cardBackgroundColor">@color/mahout_surface</item>
+        <item name="cardCornerRadius">@dimen/mahout_radius_card</item>
+        <item name="cardElevation">0dp</item>
+
+        <!-- Hairline stroke for premium separation -->
+        <item name="strokeWidth">@dimen/mahout_stroke_1</item>
+        <item name="strokeColor">@color/mahout_stroke</item>
+
+        <!-- If a card is clickable, the ripple comes from foreground (see Widget.Mahout.Card.Clickable) -->
+    </style>
+
+    <style name="Widget.Mahout.Card.Clickable" parent="Widget.Mahout.Card">
+        <!-- Foreground ripple that respects rounded corners -->
+        <item name="android:foreground">@drawable/ripple_mahout_card</item>
+    </style>
+
+    <!-- =========================
+         Text inputs (Outlined)
+         ========================= -->
+    <style name="Widget.Mahout.TextInputLayout.Outlined" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <!-- Corner radius = 16dp for inputs -->
+        <item name="boxCornerRadiusTopStart">@dimen/mahout_radius_input</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/mahout_radius_input</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/mahout_radius_input</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/mahout_radius_input</item>
+
+        <!-- Luxury: calm surface fill -->
+        <item name="boxBackgroundColor">@color/mahout_surface</item>
+
+        <!-- Stroke states (focused = gold) -->
+        <item name="boxStrokeColor">@color/mahout_input_stroke</item>
+        <item name="hintTextColor">@color/mahout_input_hint</item>
+
+        <!-- Text colors -->
+        <item name="android:textColor">@color/mahout_text_primary</item>
+        <item name="android:textColorHint">@color/mahout_text_secondary</item>
+
+        <!-- Remove “Material loudness” -->
+        <item name="errorTextColor">@color/mahout_danger</item>
+    </style>
+
+    <style name="Widget.Mahout.TextInputEditText" parent="Widget.MaterialComponents.TextInputEditText.OutlinedBox">
+        <item name="android:textColor">@color/mahout_text_primary</item>
+        <item name="android:textColorHint">@color/mahout_text_secondary</item>
+    </style>
+
+</resources>

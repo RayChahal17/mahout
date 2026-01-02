@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!--
+      IMPORTANT: The `strokeColor` has been removed from these paths.
+      This allows the icon to be tinted by a ColorStateList (e.g., in a BottomNavigationView).
+    -->
+
+    <!-- Ground -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeWidth="2.25"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M3.2 19.2H20.8" />
+
+    <!-- Left peak -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeWidth="2.25"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M3 19.2 7 11.0c0.40,-0.72 1.44,-0.72 1.84,0l2.0 3.6" />
+
+    <!-- Right peak -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeWidth="2.25"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M11.6 14.0 14.9 8.5c0.40,-0.66 1.38,-0.66 1.78,0L20.0 19.2" />
+
+    <!-- Switchback trail -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeAlpha="1"
+        android:strokeWidth="2.0"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M8 19.2c1.0,-1.0 1.8,-2.0 2,-3.1 0.5,-0.8 1,-1.6 1.5,-2" />
+
+</vector>

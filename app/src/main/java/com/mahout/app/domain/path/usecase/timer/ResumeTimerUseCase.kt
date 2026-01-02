@@ -48,7 +48,6 @@ class ResumeTimerUseCase @Inject constructor(
             TimerState(
                 status = TimerStatus.RUNNING,
                 actionId = actionId,
-                currentSessionId = sessionId,
                 accumulatedMillis = state.accumulatedMillis,
                 updatedAt = now
             )

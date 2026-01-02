@@ -6,6 +6,7 @@
     <string name="tab_elephant">Elephant</string>
     <string name="tab_north_star">North Star</string>
     <string name="tab_mahout">Mahout</string>
+    <string name="elephant_prompt_default">How are you feeling?</string>
 
     <string name="action_settings">Settings</string>
     <string name="common_loading">Loading…</string>
@@ -36,7 +37,7 @@
     <string name="aim_error_title_required">Title is required</string>
 
 
-    <string name="aim_add_goal">+ Add Goal</string>
+    <string name="aim_add_goal">Add Goal</string>
 
 
     <string name="aim_field_target_date_optional">Target date (optional)</string>
@@ -164,7 +165,7 @@
     <string name="goal_detail_not_found">Goal not found.</string>
     <string name="goal_detail_receipts_title">Receipts</string>
     <string name="goal_detail_receipts_body">Receipts (sessions and totals) will appear here in a later day. This placeholder confirms the screen structure.</string>
-    <string name="goal_field_target_optional">Link one of your goals to this action</string>
+    <string name="goal_field_target_optional">Link one of your actions to this goal</string>
     <!-- Path Timer (Day 13+) -->
     <string name="timer_notification_channel_name">Timer</string>
     <string name="timer_notification_channel_description">Timer controls for time-based actions.</string>
@@ -193,5 +194,56 @@
     <string name="path_timer_no_actions">Create an action first, then start a timer.</string>
     <string name="path_timer_stop_first">Stop the current timer first.</string>
     <string name="path_timer_notifications_denied">Notifications are required to show timer controls.</string>
+
+    <!-- Path Insights -->
+    <string name="path_insights_title">Insights</string>
+    <string name="path_insights_logged">Logged</string>
+    <string name="path_insights_deep_focus">Deep Focus</string>
+    <string name="path_insights_today">Today</string>
+    <string name="path_insights_week">Week</string>
+    <string name="path_insights_month">Month</string>
+    <string name="path_insights_year">Year</string>
+    <string name="path_insights_total">Total</string>
+    <string name="path_insights_top_task">Top task</string>
+    <string name="path_insights_sessions">Sessions</string>
+    <string name="path_insights_view_all_tasks">View all tasks →</string>
+
+    <!-- Elephant (mood log overlay) -->
+    <string name="elephant_note_hint">Add a note (optional)</string>
+    <string name="elephant_save">Save</string>
+    <string name="elephant_trends_placeholder">Last 7 days: — • Lifetime: —</string>
+    <string name="elephant_trends_summary">Last 7 days: %1$d • Lifetime: %2$d</string>
+    <string name="elephant_recent_title">Recent</string>
+    <string name="elephant_history_empty">No mood logs yet.</string>
+    <string name="elephant_delete_title">Delete mood log?</string>
+    <string name="elephant_delete_message">This can’t be undone.</string>
+
+    <!-- Mahout: Journal editor + list -->
+    <string name="mahout_journal">Journal</string>
+    <string name="mahout_past_entries">Past entries</string>
+    <string name="mahout_empty_entries">No entries yet.</string>
+
+    <string name="mahout_save">Save</string>
+    <string name="mahout_saved">Saved</string>
+    <string name="mahout_editor_hint">Write what’s on your mind…</string>
+
+    <string name="mahout_type_new_entry">New entry</string>
+    <string name="mahout_type_feeling">Journal a feeling</string>
+    <string name="mahout_type_plan">Plan next step</string>
+    <string name="mahout_type_gratitude">Gratitude</string>
+
+    <string name="today">Today</string>
+    <string name="back">Back</string>
+
+    <string name="mahout_discard_title">Discard changes?</string>
+    <string name="mahout_discard_message">You have unsaved writing. If you leave, it will be lost.</string>
+    <string name="mahout_discard_confirm">Discard</string>
+    <string name="mahout_discard_cancel">Keep writing</string>
+
+    <string name="mahout_delete_title">Delete entry?</string>
+    <string name="mahout_delete_message">This can’t be undone.</string>
+    <string name="mahout_delete_confirm">Delete</string>
+    <string name="mahout_delete_cancel">Cancel</string>
+
 
 </resources>

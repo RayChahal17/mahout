@@ -2,17 +2,22 @@ package com.mahout.app.ui.path.timeline
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RectF
+import android.graphics.Shader
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.view.View
+import androidx.appcompat.R as AppCompatR
+import androidx.core.graphics.ColorUtils
 import com.google.android.material.color.MaterialColors
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
@@ -25,7 +30,7 @@ class DayTimelineView @JvmOverloads constructor(
     private var date: LocalDate = LocalDate.now()
     private var blocks: List<TimelineBlock> = emptyList()
 
-    // ✅ 1-hour rows, 6 columns per row => 10-min slots
+    // 1-hour rows, 6 columns per row => 10-min slots
     private val minutesPerRow = 60
     private val columns = 6
     private val minutesPerCol = 10
@@ -35,7 +40,7 @@ class DayTimelineView @JvmOverloads constructor(
     private fun dp(v: Float) = v * density
     private fun sp(v: Float) = v * resources.displayMetrics.scaledDensity
 
-    // Theme-derived colors
+    // ===== Theme-derived colors (NO hardcoded greys) =====
     private val outlineColor =
         MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutline)
     private val onSurfaceVariantColor =
@@ -43,59 +48,79 @@ class DayTimelineView @JvmOverloads constructor(
     private val onSurfaceColor =
         MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface)
 
-    // Layout metrics
+    private val surfaceColor =
+        MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface)
+    private val surfaceVariantColor =
+        MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceVariant)
+
+    // ✅ Use AppCompat attr constant so it exists in your project.
+    private val primaryColor =
+        MaterialColors.getColor(this, AppCompatR.attr.colorPrimary)
+
+    private val isDarkTheme: Boolean = ColorUtils.calculateLuminance(surfaceColor) < 0.35
+
+    // ===== Layout metrics =====
     private val labelWidth = dp(44f)
     private val gridTopLabelHeight = dp(18f)
     private val topPadding = dp(10f)
     private val bottomPadding = dp(12f)
 
-    private val rowHeight = dp(46f)
+    private val rowHeight = dp(52f)
     private val colGap = dp(10f)
 
     private val pillHeight = dp(16f)
     private val pillRadius = dp(10f)
 
-    private val blockHeight = dp(18f)
+    private val blockHeight = dp(22f)
     private val blockRadius = dp(12f)
-    private val blockInsetH = dp(6f)
-    private val blockUnderlineH = dp(2.2f)
+    private val blockInsetH = dp(5f)
 
-    // Paints
+    // ===== Paints =====
     private val gridLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = dp(1f)
         color = outlineColor
-        alpha = 30
+        alpha = if (isDarkTheme) 20 else 26
     }
 
     private val emptyPillStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = dp(1.2f)
+        strokeWidth = dp(1f)
         color = outlineColor
-        alpha = 60
+        alpha = if (isDarkTheme) 38 else 42
     }
 
-    private val blockFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val emptyPillFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
+        color = surfaceVariantColor
+        alpha = if (isDarkTheme) 70 else 120
     }
 
-    private val blockShadow = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
+    private val blockFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
 
-    private val underlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    // “Lift” without blur (fast)
+    private val blockLiftPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
+        color = 0xFF000000.toInt()
+        alpha = if (isDarkTheme) 30 else 22
     }
 
     private val blockStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = dp(1.2f)
+        strokeWidth = dp(1.25f)
+    }
+
+    private val blockHighlight = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = dp(1f)
+        color = 0xFFFFFFFF.toInt()
+        alpha = if (isDarkTheme) 35 else 55
     }
 
     private val labelPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = sp(12f)
         color = onSurfaceVariantColor
-        alpha = 160
+        alpha = 150
     }
 
     private val tinyTopLabelPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -113,12 +138,26 @@ class DayTimelineView @JvmOverloads constructor(
     private val checkPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = sp(12f)
         color = onSurfaceColor
-        alpha = 230
+        alpha = 220
+    }
+
+    private val nowLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = dp(1.2f)
+        color = primaryColor
+        alpha = if (isDarkTheme) 120 else 95
     }
 
     private val nowDotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        alpha = 190
+        color = primaryColor
+        alpha = 220
+    }
+
+    private val nowDotInnerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = surfaceColor
+        alpha = 255
     }
 
     private val hourFormatter = DateTimeFormatter.ofPattern("ha", Locale.getDefault())
@@ -131,19 +170,65 @@ class DayTimelineView @JvmOverloads constructor(
 
     private val tmpRect = RectF()
 
+    /**
+     * ✅ “Now” indicator correctness fix:
+     * - The view needs to redraw over time.
+     * - We schedule invalidation every minute on the minute boundary.
+     * - This also fixes cases where you change device time or cross midnight.
+     */
+    private val nowTicker = object : Runnable {
+        override fun run() {
+            if (!isAttachedToWindow) return
+
+            // Redraw so LocalTime.now() updates visually.
+            invalidate()
+
+            // Align to the next minute boundary for stability (no drift).
+            val nowMs = System.currentTimeMillis()
+            val delayToNextMinute = 60_000L - (nowMs % 60_000L)
+            postDelayed(this, delayToNextMinute)
+        }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        removeCallbacks(nowTicker)
+        post(nowTicker)
+    }
+
+    override fun onDetachedFromWindow() {
+        removeCallbacks(nowTicker)
+        super.onDetachedFromWindow()
+    }
+
     fun submit(date: LocalDate, blocks: List<TimelineBlock>) {
         this.date = date
         this.blocks = blocks
         invalidate()
     }
-
-    fun scrollYForTime(time: LocalTime): Int {
+    /**
+     * REQUIRED by TimelineView.kt.
+     *
+     * TimelineView uses this to:
+     * - auto-scroll to "now"
+     * - detect if user is near the current time
+     *
+     * It converts a LocalTime (like 14:35) into the Y scroll position inside this view.
+     */
+    fun scrollYForTime(time: java.time.LocalTime): Int {
         val minutes = time.hour * 60 + time.minute
+
+        // Clamp into valid day range so we never return invalid coordinates.
         val rowIndex = (minutes / minutesPerRow).coerceIn(0, rowsPerDay - 1)
         val within = (minutes % minutesPerRow).toFloat() / minutesPerRow.toFloat()
-        val y = topPadding + gridTopLabelHeight + rowIndex * rowHeight + (within * rowHeight)
+
+        // This must match the exact grid top used in onDraw().
+        val gridTop = topPadding + gridTopLabelHeight
+
+        val y = gridTop + rowIndex * rowHeight + within * rowHeight
         return y.toInt()
     }
+
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = MeasureSpec.getSize(widthMeasureSpec)
@@ -169,52 +254,44 @@ class DayTimelineView @JvmOverloads constructor(
         drawTopMinuteLabels(canvas)
         drawVerticalGuides(canvas, gridTop)
 
-        // Mark occupied slots so we do NOT draw empty pills behind blocks.
         val occupied = BooleanArray(rowsPerDay * columns)
         markOccupiedSlots(occupied)
 
-        // Draw background pill grid and hour labels
         for (row in 0 until rowsPerDay) {
             val rowTop = gridTop + row * rowHeight
             drawHourLabel(canvas, row, rowTop)
             drawRowGrid(canvas, row, rowTop, occupied)
         }
 
-        // Draw blocks on top
         drawBlocks(canvas, gridTop)
 
-        // Draw "now" dot only if viewing today
+        // Only draw now indicator for “today”
         if (date == LocalDate.now()) {
-            drawNowDot(canvas, gridTop)
+            drawNowIndicator(canvas, gridTop)
         }
     }
 
     private fun drawTopMinuteLabels(canvas: Canvas) {
         val y = topPadding + dp(12f)
-        canvas.drawText(":00", gridLeft, y, tinyTopLabelPaint)
-
-        val xMid = gridLeft + (gridWidth / 2f)
-        canvas.drawText(":30", xMid - dp(10f), y, tinyTopLabelPaint)
+        for (col in 0 until columns) {
+            val minute = col * minutesPerCol
+            val label = minute.toString().padStart(2, '0')
+            val x = gridLeft + col * (slotWidth + colGap) + dp(2f)
+            canvas.drawText(label, x, y, tinyTopLabelPaint)
+        }
     }
 
     private fun drawVerticalGuides(canvas: Canvas, gridTop: Float) {
-        val y1 = gridTop
-        val y2 = (topPadding + gridTopLabelHeight + rowsPerDay * rowHeight)
-
-        canvas.drawLine(gridLeft, y1, gridLeft, y2, gridLinePaint)
-        canvas.drawLine(gridLeft + gridWidth / 2f, y1, gridLeft + gridWidth / 2f, y2, gridLinePaint)
-        canvas.drawLine(gridRight, y1, gridRight, y2, gridLinePaint)
+        for (col in 1 until columns) {
+            val x = gridLeft + col * slotWidth + (col - 1) * colGap + colGap / 2f
+            canvas.drawLine(x, gridTop, x, gridTop + rowsPerDay * rowHeight, gridLinePaint)
+        }
     }
 
     private fun drawHourLabel(canvas: Canvas, row: Int, rowTop: Float) {
-        val hour = row % 24
-        val labelTime = LocalTime.of(hour, 0)
-        val label = hourFormatter.format(labelTime).lowercase(Locale.getDefault())
-
-        val centerY = rowTop + rowHeight / 2f
+        val label = hourFormatter.format(LocalTime.of(row, 0)).lowercase(Locale.getDefault())
         val fm = labelPaint.fontMetrics
-        val baseline = centerY - (fm.ascent + fm.descent) / 2f
-
+        val baseline = rowTop + rowHeight / 2f - (fm.ascent + fm.descent) / 2f
         canvas.drawText(label, paddingLeft.toFloat(), baseline, labelPaint)
     }
 
@@ -230,42 +307,8 @@ class DayTimelineView @JvmOverloads constructor(
             val right = left + slotWidth
 
             tmpRect.set(left, pillTop, right, pillBottom)
+            canvas.drawRoundRect(tmpRect, pillRadius, pillRadius, emptyPillFill)
             canvas.drawRoundRect(tmpRect, pillRadius, pillRadius, emptyPillStroke)
-        }
-    }
-
-    // ✅ Helpers (fix midnight end + prevent min/max flipping)
-    private fun minutesOf(t: LocalTime): Int = t.hour * 60 + t.minute
-
-    private fun normalizedStartEndMinutes(b: TimelineBlock): Pair<Int, Int> {
-        val s = minutesOf(b.start).coerceIn(0, 24 * 60)
-        var e = minutesOf(b.end).coerceIn(0, 24 * 60)
-
-        // If end is midnight but start is later in day, treat end as 24:00.
-        if (e == 0 && s > 0 && b.end == LocalTime.MIDNIGHT) {
-            e = 24 * 60
-        }
-        return s to e
-    }
-
-    private fun markOccupiedSlots(occupied: BooleanArray) {
-        for (b in blocks) {
-            val (s, e) = normalizedStartEndMinutes(b)
-            if (e <= s) continue
-
-            val startSlot = s / minutesPerCol
-            val endSlotExclusive = ceil(e / minutesPerCol.toDouble()).toInt()
-
-            for (slot in startSlot until endSlotExclusive) {
-                val row = (slot * minutesPerCol) / minutesPerRow
-                if (row !in 0 until rowsPerDay) continue
-
-                val withinRowMin = (slot * minutesPerCol) % minutesPerRow
-                val col = (withinRowMin / minutesPerCol).coerceIn(0, columns - 1)
-
-                val idx = row * columns + col
-                if (idx in occupied.indices) occupied[idx] = true
-            }
         }
     }
 
@@ -293,87 +336,151 @@ class DayTimelineView @JvmOverloads constructor(
                 val startColF = (segStart - rowStartMin).toFloat() / minutesPerCol.toFloat()
                 val endColF = (segEnd - rowStartMin).toFloat() / minutesPerCol.toFloat()
 
-                val startCol = startColF.toInt().coerceIn(0, columns - 1)
-                val endColExclusive = ceil(endColF.toDouble()).toInt().coerceIn(startCol + 1, columns)
-
-                val left = gridLeft + startCol * (slotWidth + colGap) + blockInsetH
-                val right = gridLeft + endColExclusive * (slotWidth + colGap) - colGap - blockInsetH
+                val left = columnFractionToX(startColF) + blockInsetH
+                val right = columnFractionToX(endColF) - blockInsetH
 
                 val rowTop = gridTop + row * rowHeight
                 val top = rowTop + (rowHeight - blockHeight) / 2f
                 val bottom = top + blockHeight
 
-                // shadow
-                blockShadow.color = b.color
-                blockShadow.alpha = 65
-                tmpRect.set(left, top + dp(2.5f), right, bottom + dp(2.5f))
-                canvas.drawRoundRect(tmpRect, blockRadius, blockRadius, blockShadow)
+                val rect = RectF(left, top, right, bottom)
 
-                // fill
-                blockFill.color = 0xFFF7F7F7.toInt()
-                blockFill.alpha = 255
-                tmpRect.set(left, top, right, bottom)
-                canvas.drawRoundRect(tmpRect, blockRadius, blockRadius, blockFill)
+                tmpRect.set(rect.left, rect.top + dp(1.2f), rect.right, rect.bottom + dp(1.2f))
+                canvas.drawRoundRect(tmpRect, blockRadius, blockRadius, blockLiftPaint)
 
-                // outline
+                val tintedMid = blendColor(surfaceColor, b.color, if (isDarkTheme) 0.24f else 0.18f)
+                val tintedTop = blendColor(surfaceColor, b.color, if (isDarkTheme) 0.34f else 0.26f)
+                val tintedBottom = blendColor(b.color, 0xFF000000.toInt(), if (isDarkTheme) 0.22f else 0.12f)
+
+                blockFill.shader = LinearGradient(
+                    rect.left, rect.top,
+                    rect.left, rect.bottom,
+                    intArrayOf(tintedTop, tintedMid, tintedBottom),
+                    floatArrayOf(0f, 0.55f, 1f),
+                    Shader.TileMode.CLAMP
+                )
+                canvas.drawRoundRect(rect, blockRadius, blockRadius, blockFill)
+                blockFill.shader = null
+
                 blockStroke.color = b.color
-                blockStroke.alpha = 170
-                canvas.drawRoundRect(tmpRect, blockRadius, blockRadius, blockStroke)
+                blockStroke.alpha = if (isDarkTheme) 160 else 150
+                canvas.drawRoundRect(rect, blockRadius, blockRadius, blockStroke)
 
-                // underline
-                underlinePaint.color = b.color
-                underlinePaint.alpha = 230
-                val ulH = dp(3.0f)
-                val ulTop = bottom - ulH
-                tmpRect.set(left, ulTop, right, bottom)
-                canvas.drawRoundRect(tmpRect, blockRadius, blockRadius, underlinePaint)
+                val inset = dp(2f)
+                tmpRect.set(rect.left + inset, rect.top + inset, rect.right - inset, rect.bottom - inset)
+                canvas.drawLine(tmpRect.left, tmpRect.top + dp(1f), tmpRect.right, tmpRect.top + dp(1f), blockHighlight)
 
                 if (row == startRow && showCheckAndTitle) {
-                    val checkX = left + dp(10f)
-                    val checkY = top + dp(13f)
+                    val baselineCenter = rect.centerY()
+
+                    val checkX = rect.left + dp(8f)
+                    val fmCheck = checkPaint.fontMetrics
+                    val checkY = baselineCenter - (fmCheck.ascent + fmCheck.descent) / 2f
 
                     checkPaint.color = b.color
+                    checkPaint.alpha = 230
                     canvas.drawText("✓", checkX, checkY, checkPaint)
 
-                    val titleX = left + dp(10f)
-                    val titleY = bottom + dp(14f)
+                    val titleX = checkX + dp(12f)
+                    val maxW = (rect.right - titleX - dp(8f)).coerceAtLeast(0f)
+                    val title = ellipsize(b.title, maxW, titlePaint)
+                    val fmTitle = titlePaint.fontMetrics
+                    val titleY = baselineCenter - (fmTitle.ascent + fmTitle.descent) / 2f
 
-                    titlePaint.color = b.color
-                    canvas.drawText(
-                        ellipsize(b.title, right - left - dp(20f), titlePaint),
-                        titleX,
-                        titleY,
-                        titlePaint
-                    )
+                    titlePaint.alpha = 230
+                    canvas.drawText(title, titleX, titleY, titlePaint)
                 }
             }
         }
     }
 
-    private fun drawNowDot(canvas: Canvas, gridTop: Float) {
+    private fun drawNowIndicator(canvas: Canvas, gridTop: Float) {
         val now = LocalTime.now()
         val minutes = now.hour * 60 + now.minute
         val rowIndex = (minutes / minutesPerRow).coerceIn(0, rowsPerDay - 1)
         val within = (minutes % minutesPerRow).toFloat() / minutesPerRow.toFloat()
 
         val y = gridTop + rowIndex * rowHeight + within * rowHeight
-        val x = paddingLeft + dp(30f)
 
-        nowDotPaint.color = 0xFFB08A2A.toInt()
-        canvas.drawCircle(x, y, dp(2.6f), nowDotPaint)
+        canvas.drawLine(gridLeft, y, gridRight, y, nowLinePaint)
+
+        val x = paddingLeft + dp(30f)
+        canvas.drawCircle(x, y, dp(4.0f), nowDotPaint)
+        canvas.drawCircle(x, y, dp(1.9f), nowDotInnerPaint)
+    }
+
+    private fun markOccupiedSlots(occupied: BooleanArray) {
+        for (b in blocks) {
+            val (startMin, endMin) = normalizedStartEndMinutes(b)
+            if (endMin <= startMin) continue
+
+            val startRow = (startMin / minutesPerRow).coerceIn(0, rowsPerDay - 1)
+            val endRow = ((max(endMin - 1, startMin)) / minutesPerRow).coerceIn(0, rowsPerDay - 1)
+
+            for (row in startRow..endRow) {
+                val rowStartMin = row * minutesPerRow
+                val rowEndMin = rowStartMin + minutesPerRow
+
+                val segStart = max(startMin, rowStartMin)
+                val segEnd = min(endMin, rowEndMin)
+                if (segEnd <= segStart) continue
+
+                val startCol = floor((segStart - rowStartMin).toFloat() / minutesPerCol.toFloat()).toInt()
+                    .coerceIn(0, columns - 1)
+                val endCol = ceil((segEnd - rowStartMin).toFloat() / minutesPerCol.toFloat()).toInt()
+                    .coerceIn(0, columns)
+
+                for (col in startCol until endCol) {
+                    val idx = row * columns + col
+                    if (idx in occupied.indices) occupied[idx] = true
+                }
+            }
+        }
+    }
+
+    private fun normalizedStartEndMinutes(b: TimelineBlock): Pair<Int, Int> {
+        fun minutesOf(t: LocalTime): Int = t.hour * 60 + t.minute
+        val s = minutesOf(b.start).coerceIn(0, 24 * 60)
+        var e = minutesOf(b.end).coerceIn(0, 24 * 60)
+        if (e == 0 && s > 0) e = 24 * 60
+        return s to e
+    }
+
+    private fun columnFractionToX(colF: Float): Float {
+        val c = colF.coerceIn(0f, columns.toFloat())
+        val whole = floor(c).toInt()
+        val gapCount = min(whole, columns - 1)
+        return gridLeft + c * slotWidth + gapCount * colGap
     }
 
     private fun ellipsize(text: String, maxWidth: Float, paint: TextPaint): String {
         if (text.isBlank()) return ""
         if (paint.measureText(text) <= maxWidth) return text
 
-        val ell = "…"
+        val ellipsis = "…"
+        val ellW = paint.measureText(ellipsis)
+        if (ellW >= maxWidth) return ellipsis
+
         var end = text.length
-        while (end > 1) {
-            val candidate = text.substring(0, end) + ell
-            if (paint.measureText(candidate) <= maxWidth) return candidate
-            end--
-        }
-        return ell
+        while (end > 0 && paint.measureText(text, 0, end) + ellW > maxWidth) end--
+        return if (end <= 0) ellipsis else text.substring(0, end) + ellipsis
+    }
+
+    private fun blendColor(color1: Int, color2: Int, ratio: Float): Int {
+        val r = ratio.coerceIn(0f, 1f)
+
+        val r1 = (color1 shr 16) and 0xFF
+        val g1 = (color1 shr 8) and 0xFF
+        val b1 = color1 and 0xFF
+
+        val r2 = (color2 shr 16) and 0xFF
+        val g2 = (color2 shr 8) and 0xFF
+        val b2 = color2 and 0xFF
+
+        val rr = (r1 + (r2 - r1) * r).toInt().coerceIn(0, 255)
+        val gg = (g1 + (g2 - g1) * r).toInt().coerceIn(0, 255)
+        val bb = (b1 + (b2 - b1) * r).toInt().coerceIn(0, 255)
+
+        return (0xFF shl 24) or (rr shl 16) or (gg shl 8) or bb
     }
 }

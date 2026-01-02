@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!--
+      IMPORTANT: The `fillColor` and `strokeColor` attributes have been removed.
+      This allows the icon to be tinted by a ColorStateList.
+    -->
+
+    <!-- Center the original SVG coordinates (around 0,0) into the 48x48 viewport -->
+    <group
+        android:translateX="24"
+        android:translateY="24">
+
+        <!-- Curvy route line (exact from SVG) -->
+        <path
+            android:pathData="M-16,14 C-6,8 -8,-2 2,-6 C12,-10 10,-18 16,-20"
+            android:strokeWidth="3.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+
+        <!-- FILLED Node 1: center (-16, 14), r=4.2 -->
+        <path
+            android:pathData="M-20.2,14 a4.2,4.2 0 1,0 8.4,0 a4.2,4.2 0 1,0 -8.4,0" />
+
+        <!-- FILLED Node 2: center (2, -6), r=3.6 -->
+        <path
+            android:pathData="M-1.8,-6 a3.6,3.6 0 1,0 8.4,0 a4.2,4.2 0 1,0 -8.4,0"/>
+
+        <!-- FILLED Node 3: center (16, -20), r=4.2 -->
+        <path
+            android:pathData="M11.8,-20 a4.2,4.2 0 1,0 8.4,0 a4.2,4.2 0 1,0 -8.4,0" />
+
+    </group>
+</vector>

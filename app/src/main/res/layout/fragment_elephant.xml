@@ -1,18 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#88000000">
 
     <TextView
-        android:id="@+id/tvTitle"
+        android:id="@+id/tvEleTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Elephant"
+        android:text="@string/tab_elephant"
         android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/white"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="36dp" />
+
+    <ImageButton
+        android:id="@+id/btnEleClose"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/common_cancel"
+        android:src="@drawable/ic_close_24"
+        app:tint="@android:color/white"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="28dp"
+        android:layout_marginEnd="20dp" />
+
+    <TextView
+        android:id="@+id/tvElePrompt"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/elephant_prompt_default"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/white"
+        app:layout_constraintTop_toBottomOf="@id/tvEleTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginTop="32dp" />
+
+    <!-- Fill to the bottom so the whole lower area can be used for scrolling feel. -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvMoods"
+        android:clipToPadding="true"
+        android:paddingBottom="160dp"
+        android:paddingTop="12dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:minHeight="260dp"
+        app:layout_constraintTop_toBottomOf="@id/tvElePrompt"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp" />
+
+    <!-- Tap label = open history bottom sheet (optional). -->
+    <TextView
+        android:id="@+id/tvMoodLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Happy"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/white"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackgroundBorderless"
+        app:layout_constraintBottom_toTopOf="@id/tvEleTrends"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:id="@+id/tvEleTrends"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/elephant_trends_placeholder"
+        android:textSize="12sp"
+        android:textColor="@android:color/white"
+        android:alpha="0.72"
+        app:layout_constraintBottom_toTopOf="@id/dotScrubber"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="10dp" />
+
+    <!-- ✅ Lower bar (thumb reach) -->
+    <com.mahout.app.ui.elephant.DotScrubberView
+        android:id="@+id/dotScrubber"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <TextView
+        android:id="@+id/tvEleError"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="#FFFF6B6B"
+        android:visibility="gone"
+        android:alpha="0.95"
+        app:layout_constraintBottom_toTopOf="@id/dotScrubber"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="8dp" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

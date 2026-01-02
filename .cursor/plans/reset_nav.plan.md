@@ -1,0 +1,5 @@
+- Remove bottom navigation entirely (menu, icons, backgrounds, tint selectors, styles).
+- Simplify `activity_main.xml` to host only a `NavHostFragment` and a toolbar (no pill card, no FAB overlay unless requested).
+- Update `nav_graph.xml` to a single-stack start destination (Aim unless specified).
+- Simplify `MainActivity` to basic NavigationUI with toolbar only; remove FAB handling and nav listeners.
+- Clean themes/colors: drop bottom-nav-specific colors/styles/selectors.

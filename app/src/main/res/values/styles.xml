@@ -10,5 +10,14 @@
       Keep this file ONLY for extra one-off widget styles (dialogs, chips, etc.)
       that are NOT duplicated elsewhere.
     -->
-
+    <!-- Simple outlined chip style that works on Material3 themes -->
+    <style name="MahoutChipOutlined" parent="Widget.MaterialComponents.Chip.Choice">
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="chipStrokeColor">?attr/colorOutline</item>
+        <item name="chipBackgroundColor">?attr/colorSurface</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+        <item name="android:textSize">12sp</item>
+        <item name="chipCornerRadius">14dp</item>
+        <item name="chipMinHeight">32dp</item>
+    </style>
 </resources>

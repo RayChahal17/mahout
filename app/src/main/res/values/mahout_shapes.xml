@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      IMPORTANT:
+      Your project is referencing @style/ShapeAppearance somewhere.
+      That style does NOT exist by default, so we define it to unblock AAPT.
+      Safe: it only affects places that explicitly reference it.
+    -->
+    <style name="ShapeAppearance">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">0dp</item>
+    </style>
+
+    <!-- Mahout default pill -->
+    <style name="ShapeAppearance.Mahout" parent="ShapeAppearance">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">999dp</item>
+    </style>
+
+    <!-- Alias -->
+    <style name="ShapeAppearance.Mahout.Pill" parent="ShapeAppearance.Mahout" />
+
+    <!-- Optional card shape -->
+    <style name="ShapeAppearance.Mahout.Card" parent="ShapeAppearance">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">24dp</item>
+    </style>
+
+    <!-- Segmented control corner overlays -->
+    <style name="ShapeAppearance.Mahout.Segment.Left" parent="ShapeAppearance">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">999dp</item>
+        <item name="cornerSizeBottomLeft">999dp</item>
+        <item name="cornerSizeTopRight">999dp</item>
+        <item name="cornerSizeBottomRight">999dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Mahout.Segment.Middle" parent="ShapeAppearance">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">0dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Mahout.Segment.Right" parent="ShapeAppearance">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">999dp</item>
+        <item name="cornerSizeBottomLeft">999dp</item>
+        <item name="cornerSizeTopRight">999dp</item>
+        <item name="cornerSizeBottomRight">999dp</item>
+    </style>
+
+</resources>

@@ -7,38 +7,105 @@
     <fragment
         android:id="@+id/aimFragment"
         android:name="com.mahout.app.ui.aim.AimFragment"
-        android:label="@string/tab_aim" />
+        android:label="">
+        <action
+            android:id="@+id/action_aimFragment_to_goalDetailFragment"
+            app:destination="@id/goalDetailFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/pathFragment"
         android:name="com.mahout.app.ui.path.PathFragment"
-        android:label="@string/tab_path" />
+        android:label="">
+        <action
+            android:id="@+id/action_pathFragment_to_pathInsightsFragment"
+            app:destination="@id/pathInsightsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/pathInsightsFragment"
+        android:name="com.mahout.app.ui.path.insights.PathInsightsFragment"
+        android:label="">
+        <argument
+            android:name="selectedDate"
+            app:argType="string" />
+    </fragment>
 
     <fragment
         android:id="@+id/elephantFragment"
         android:name="com.mahout.app.ui.elephant.ElephantFragment"
-        android:label="@string/tab_elephant" />
+        android:label="" />
 
     <fragment
         android:id="@+id/northStarFragment"
         android:name="com.mahout.app.ui.northstar.NorthStarFragment"
-        android:label="@string/tab_north_star" />
+        android:label=""/>
 
     <fragment
         android:id="@+id/mahoutFragment"
         android:name="com.mahout.app.ui.mahout.MahoutFragment"
-        android:label="@string/tab_mahout" />
+        android:label="" >
+        <action
+        android:id="@+id/action_mahoutFragment_to_journalEditorFragment"
+        app:destination="@id/journalEditorFragment" />
+        <action
+            android:id="@+id/action_mahoutFragment_to_journalListFragment"
+            app:destination="@id/journalListFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/journalListFragment"
+        android:name="com.mahout.app.ui.mahout.list.JournalListFragment"
+        android:label="Past entries" >
+        <action
+            android:id="@+id/action_journalListFragment_to_journalEditorFragment"
+            app:destination="@id/journalEditorFragment" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/journalEditorFragment"
+        android:name="com.mahout.app.ui.mahout.editor.JournalEditorFragment"
+        android:label="Journal">
+
+        <argument
+            android:name="entryType"
+            app:argType="string"
+            android:defaultValue="NEW_ENTRY" />
+
+        <argument
+            android:name="entryId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+
+        <argument
+            android:name="prefillBody"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+
+        <argument
+            android:name="promptId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
+
+
+
+
 
     <!-- Not a bottom tab; opened from toolbar menu -->
     <fragment
         android:id="@+id/settingsFragment"
         android:name="com.mahout.app.ui.settings.SettingsFragment"
-        android:label="@string/action_settings" />
+        android:label=""/>
 
     <fragment
         android:id="@+id/goalDetailFragment"
         android:name="com.mahout.app.ui.aim.GoalDetailFragment"
-        android:label="@string/goal_detail_title">
+        android:label="">
         <argument
             android:name="goalId"
             app:argType="string" />

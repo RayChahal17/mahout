@@ -18,25 +18,6 @@ import java.time.Instant
 @Dao
 interface ActionGoalLinkDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertLink(entity: ActionGoalLinkEntity)
-
-    /**
-     * Close any active link rows for an action (enforces single active link).
-     */
-    @Query(
-        """
-        UPDATE action_goal_links
-        SET unlinkedAt = :unlinkedAt
-        WHERE actionId = :actionId
-          AND unlinkedAt IS NULL
-        """
-    )
-    suspend fun closeActiveLinksForAction(actionId: String, unlinkedAt: Instant)
-
-    /**
-     * Observe the active link row for an action.
-     */
     @Query(
         """
         SELECT * FROM action_goal_links
@@ -47,12 +28,19 @@ interface ActionGoalLinkDao {
     )
     fun observeActiveLinkForAction(actionId: String): Flow<ActionGoalLinkEntity?>
 
-    /**
-     * Day 11:
-     * If a Goal is deleted, unlink all Actions currently pointing to it.
-     *
-     * We DO NOT delete sessions, we just close active link intervals.
-     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(entity: ActionGoalLinkEntity)
+
+    @Query(
+        """
+        UPDATE action_goal_links
+        SET unlinkedAt = :unlinkedAt
+        WHERE actionId = :actionId
+          AND unlinkedAt IS NULL
+        """
+    )
+    suspend fun closeActiveLinkForAction(actionId: String, unlinkedAt: Instant)
+
     @Query(
         """
         UPDATE action_goal_links
@@ -62,4 +50,53 @@ interface ActionGoalLinkDao {
         """
     )
     suspend fun closeActiveLinksForGoal(goalId: String, unlinkedAt: Instant)
+
+    // ------------------------------
+    // Aim Receipts additions
+    // ------------------------------
+
+    @Query(
+        """
+        SELECT * FROM action_goal_links
+        WHERE unlinkedAt IS NULL
+        """
+    )
+    fun observeActiveLinks(): Flow<List<ActionGoalLinkEntity>>
+
+    @Query(
+        """
+        SELECT actionId FROM action_goal_links
+        WHERE goalId = :goalId
+          AND unlinkedAt IS NULL
+        """
+    )
+    fun observeActiveActionIdsForGoal(goalId: String): Flow<List<String>>
+
+    /**
+     * Overlap condition for [from, to):
+     * - linkedAt < to
+     * - (unlinkedAt IS NULL OR unlinkedAt > from)
+     */
+    @Query(
+        """
+        SELECT * FROM action_goal_links
+        WHERE linkedAt < :to
+          AND (unlinkedAt IS NULL OR unlinkedAt > :from)
+        """
+    )
+    suspend fun getLinksOverlapping(from: Instant, to: Instant): List<ActionGoalLinkEntity>
+
+    @Query(
+        """
+        SELECT * FROM action_goal_links
+        WHERE goalId = :goalId
+          AND linkedAt < :to
+          AND (unlinkedAt IS NULL OR unlinkedAt > :from)
+        """
+    )
+    suspend fun getLinksOverlappingForGoal(
+        goalId: String,
+        from: Instant,
+        to: Instant
+    ): List<ActionGoalLinkEntity>
 }

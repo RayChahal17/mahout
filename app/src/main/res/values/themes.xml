@@ -1,9 +1,31 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base Material Theme -->
     <style name="Base.Theme.Mahout" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+
+        <!-- Brand colors -->
+        <item name="colorPrimary">@color/mahout_accent</item>
+        <item name="colorOnPrimary">@color/mahout_on_accent</item>
+
+        <item name="colorSecondary">@color/mahout_ink</item>
+        <item name="colorOnSecondary">@color/mahout_bg</item>
+
+        <!-- Backgrounds / surfaces -->
+        <item name="colorSurface">@color/mahout_surface</item>
+        <item name="colorOnSurface">@color/mahout_ink</item>
+        <item name="android:colorBackground">@color/mahout_bg</item>
+
+        <!-- Status / navigation bars -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+
+        <!-- Control highlight tint -->
+        <item name="android:colorControlHighlight">@color/mahout_nav_ripple</item>
+
     </style>
 
+    <!-- Actual app theme -->
     <style name="Theme.Mahout" parent="Base.Theme.Mahout" />
+
 </resources>
