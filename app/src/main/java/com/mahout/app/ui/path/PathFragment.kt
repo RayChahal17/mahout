@@ -130,6 +130,10 @@ class PathFragment : Fragment() {
                     bundle
                 )
             }
+            override fun onPaintTimeRange(date: LocalDate, startMinuteOfDay: Int, endMinuteExclusive: Int) {
+                showPaintTimeDialog(date, startMinuteOfDay, endMinuteExclusive)
+            }
+
         })
 
         adapter = ActionListAdapter(
@@ -667,6 +671,40 @@ class PathFragment : Fragment() {
                 }
             }
     }
+
+    private fun showPaintTimeDialog(date: LocalDate, startMinuteOfDay: Int, endMinuteExclusive: Int) {
+        val actions = latestActions
+
+        if (actions.isEmpty()) {
+            binding.root.showSnackbar("Add an action first to paint time.")
+            binding.timelineView.clearSelection()
+            return
+        }
+
+        val titles = actions.map { it.title }.toTypedArray()
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Choose an action")
+            .setItems(titles) { _, which ->
+                val action = actions[which]
+
+                // Painting should feel like coloring: overwrite anything underneath.
+                viewModel.logManualTimeMinutes(
+                    date = date,
+                    actionId = action.id,
+                    title = action.title,
+                    startMinuteOfDay = startMinuteOfDay,
+                    endMinuteExclusive = endMinuteExclusive,
+                    strategy = PathViewModel.LogTimeStrategy.OVERWRITE
+                )
+            }
+            .setOnDismissListener {
+                // Keep UI clean (selection goes away whether they pick or cancel)
+                binding.timelineView.clearSelection()
+            }
+            .show()
+    }
+
 
     private fun buildProgressLabel(elapsedMs: Long, targetMs: Long): String {
         val doneMin = (elapsedMs / 60_000L).toInt().coerceAtLeast(0)

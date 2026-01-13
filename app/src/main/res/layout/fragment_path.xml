@@ -55,7 +55,10 @@
         android:layout_marginTop="@dimen/spacing_12"
         app:layout_constraintTop_toBottomOf="@id/tvTimelinePill"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent">
+
+
+    </com.mahout.app.ui.path.timeline.TimelineView>
 
 
     <com.google.android.material.button.MaterialButtonToggleGroup

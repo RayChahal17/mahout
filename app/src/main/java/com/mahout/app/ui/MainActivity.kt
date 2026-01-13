@@ -62,8 +62,13 @@ class MainActivity : AppCompatActivity() {
         // This prevents the dock from feeling cramped on some devices.
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
             val sysBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // Keep your content safe; bottom dock already has marginBottom, so we just add extra if needed.
-            binding.root.updatePadding(bottom = sysBars.bottom)
+            // Keep top inset for status bar; do NOT push bottom dock up.
+            binding.root.updatePadding(
+                left = sysBars.left,
+                top = sysBars.top,
+                right = sysBars.right,
+                bottom = 0
+            )
             insets
         }
     }

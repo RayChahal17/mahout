@@ -20,6 +20,11 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import android.view.GestureDetector
+import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
+import android.view.ViewConfiguration
+
 
 class DayTimelineView @JvmOverloads constructor(
     context: Context,
@@ -65,7 +70,7 @@ class DayTimelineView @JvmOverloads constructor(
     private val topPadding = dp(10f)
     private val bottomPadding = dp(12f)
 
-    private val rowHeight = dp(52f)
+    private val rowHeight = dp(44f)
     private val colGap = dp(10f)
 
     private val pillHeight = dp(16f)
@@ -170,6 +175,234 @@ class DayTimelineView @JvmOverloads constructor(
 
     private val tmpRect = RectF()
 
+
+    // ==========================
+    // Timeline “cell painting”
+    // ==========================
+    /**
+     * The timeline grid is 24 rows × 6 columns.
+     * Each cell = 10 minutes (minutesPerCol).
+     *
+     * We let the user:
+     * - Tap a cell => select that 10-min slot
+     * - Long-press + drag => select a range of slots
+     * Then we callback to the host (TimelineView/Fragment) with:
+     * startMinuteOfDay inclusive, endMinuteExclusive
+     */
+    interface OnTimeRangeSelectedListener {
+        fun onTimeRangeSelected(date: LocalDate, startMinuteOfDay: Int, endMinuteExclusive: Int)
+    }
+
+    private var timeRangeListener: OnTimeRangeSelectedListener? = null
+
+    fun setOnTimeRangeSelectedListener(listener: OnTimeRangeSelectedListener?) {
+        timeRangeListener = listener
+    }
+
+    // Selection state (stored in minutes-of-day)
+    private var selectionStartMinute: Int? = null
+    private var selectionEndMinuteExclusive: Int? = null
+
+    // Drag selection state
+    private var isDragSelecting: Boolean = false
+    private var dragAnchorMinute: Int = 0
+
+    // Paint for selection overlay (uses theme colors already in this view)
+    private val selectionFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        // Blend primary over surface so it feels like “colored cells”
+        color = blendColor(surfaceColor, primaryColor, if (isDarkTheme) 0.30f else 0.22f)
+        alpha = if (isDarkTheme) 140 else 170
+    }
+
+    private val selectionStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = dp(1.2f)
+        color = primaryColor
+        alpha = if (isDarkTheme) 200 else 170
+    }
+
+    /**
+     * GestureDetector lets us:
+     * - detect a clean tap (without fighting scrolling)
+     * - detect long-press to enter “paint mode”
+     *
+     * IMPORTANT: This view sits inside a NestedScrollView.
+     * We ONLY call requestDisallowInterceptTouchEvent(true) after long-press,
+     * so normal scrolling still works.
+     */
+    private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+        override fun onDown(e: MotionEvent): Boolean {
+            // Return true so we keep receiving events (tap up, long press, etc.)
+            return true
+        }
+
+        override fun onSingleTapUp(e: MotionEvent): Boolean {
+            handleSingleTap(e.x, e.y)
+            return true
+        }
+
+        override fun onLongPress(e: MotionEvent) {
+            startDragSelection(e.x, e.y)
+        }
+    })
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        // Let GestureDetector process tap/long press.
+        gestureDetector.onTouchEvent(event)
+
+        if (isDragSelecting) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> updateDragSelection(event.x, event.y)
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> finishDragSelection()
+            }
+            return true
+        }
+
+        // If user is scrolling vertically, the parent NestedScrollView will intercept MOVE
+        // (unless we disallow it). That gives us an ACTION_CANCEL and scroll works normally.
+        return true
+    }
+
+    /**
+     * Clears selection highlight (Fragment should call this after user picks an action or cancels).
+     */
+    fun clearSelection() {
+        selectionStartMinute = null
+        selectionEndMinuteExclusive = null
+        isDragSelecting = false
+        invalidate()
+    }
+
+    private data class HitCell(val row: Int, val col: Int, val minuteOfDay: Int)
+
+    private fun handleSingleTap(x: Float, y: Float) {
+        val cell = hitTestCell(x, y) ?: return
+
+        val start = cell.minuteOfDay
+        val endExclusive = (start + minutesPerCol).coerceAtMost(24 * 60)
+
+        setSelectionRange(start, endExclusive)
+
+        // Callback immediately (tap = fast paint)
+        timeRangeListener?.onTimeRangeSelected(date, start, endExclusive)
+    }
+
+    private fun startDragSelection(x: Float, y: Float) {
+        val cell = hitTestCell(x, y) ?: return
+
+        // Enter paint mode: stop scrollview from stealing the drag
+        parent?.requestDisallowInterceptTouchEvent(true)
+
+        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+
+        isDragSelecting = true
+        dragAnchorMinute = cell.minuteOfDay
+
+        val start = dragAnchorMinute
+        val endExclusive = (start + minutesPerCol).coerceAtMost(24 * 60)
+        setSelectionRange(start, endExclusive)
+    }
+
+    private fun updateDragSelection(x: Float, y: Float) {
+        val cell = hitTestCellClamped(x, y) ?: return
+
+        val a = dragAnchorMinute
+        val b = cell.minuteOfDay
+
+        val start = min(a, b)
+        val endExclusive = (max(a, b) + minutesPerCol).coerceAtMost(24 * 60)
+
+        setSelectionRange(start, endExclusive)
+    }
+
+    private fun finishDragSelection() {
+        if (!isDragSelecting) return
+
+        isDragSelecting = false
+        parent?.requestDisallowInterceptTouchEvent(false)
+
+        val s = selectionStartMinute ?: return
+        val e = selectionEndMinuteExclusive ?: return
+        if (e <= s) return
+
+        // Callback once on release (feels like “paint then choose color”)
+        timeRangeListener?.onTimeRangeSelected(date, s, e)
+    }
+
+    private fun setSelectionRange(startMinuteOfDay: Int, endMinuteExclusive: Int) {
+        val s = startMinuteOfDay.coerceIn(0, 24 * 60)
+        val e = endMinuteExclusive.coerceIn(0, 24 * 60)
+        if (e <= s) {
+            selectionStartMinute = null
+            selectionEndMinuteExclusive = null
+        } else {
+            selectionStartMinute = s
+            selectionEndMinuteExclusive = e
+        }
+        invalidate()
+    }
+
+    private fun hitTestCell(x: Float, y: Float): HitCell? {
+        val gridTop = topPadding + gridTopLabelHeight
+        val gridBottom = gridTop + rowsPerDay * rowHeight
+
+        if (x < gridLeft || x > gridRight) return null
+        if (y < gridTop || y > gridBottom) return null
+
+        val row = ((y - gridTop) / rowHeight).toInt().coerceIn(0, rowsPerDay - 1)
+
+        // Inverse of: left = gridLeft + col * (slotWidth + colGap)
+        val step = slotWidth + colGap
+        val col = (((x - gridLeft) / step).toInt()).coerceIn(0, columns - 1)
+
+        val minute = row * minutesPerRow + col * minutesPerCol
+        return HitCell(row, col, minute)
+    }
+
+    private fun hitTestCellClamped(x: Float, y: Float): HitCell? {
+        val gridTop = topPadding + gridTopLabelHeight
+        val gridBottom = gridTop + rowsPerDay * rowHeight
+
+        val cx = x.coerceIn(gridLeft + 1f, gridRight - 1f)
+        val cy = y.coerceIn(gridTop + 1f, gridBottom - 1f)
+        return hitTestCell(cx, cy)
+    }
+
+    private fun drawSelection(canvas: Canvas, gridTop: Float) {
+        val sRaw = selectionStartMinute ?: return
+        val eRaw = selectionEndMinuteExclusive ?: return
+
+        val s = sRaw.coerceIn(0, 24 * 60)
+        val e = eRaw.coerceIn(0, 24 * 60)
+        if (e <= s) return
+
+        // Align to 10-min boundaries just in case (paint should snap to cells).
+        val startAligned = (s / minutesPerCol) * minutesPerCol
+        val endAligned = ((e + minutesPerCol - 1) / minutesPerCol) * minutesPerCol
+
+        var m = startAligned
+        while (m < endAligned) {
+            val row = (m / minutesPerRow).coerceIn(0, rowsPerDay - 1)
+            val withinRow = m % minutesPerRow
+            val col = (withinRow / minutesPerCol).coerceIn(0, columns - 1)
+
+            val rowTop = gridTop + row * rowHeight
+            val pillTop = rowTop + (rowHeight - pillHeight) / 2f
+            val pillBottom = pillTop + pillHeight
+
+            val left = gridLeft + col * (slotWidth + colGap)
+            val right = left + slotWidth
+
+            tmpRect.set(left, pillTop, right, pillBottom)
+            canvas.drawRoundRect(tmpRect, pillRadius, pillRadius, selectionFillPaint)
+            canvas.drawRoundRect(tmpRect, pillRadius, pillRadius, selectionStrokePaint)
+
+            m += minutesPerCol
+        }
+    }
+
+
     /**
      * ✅ “Now” indicator correctness fix:
      * - The view needs to redraw over time.
@@ -264,6 +497,9 @@ class DayTimelineView @JvmOverloads constructor(
         }
 
         drawBlocks(canvas, gridTop)
+        drawBlocks(canvas, gridTop)
+        drawSelection(canvas, gridTop)
+
 
         // Only draw now indicator for “today”
         if (date == LocalDate.now()) {

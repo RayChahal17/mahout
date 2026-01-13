@@ -276,6 +276,78 @@ class PathViewModel @Inject constructor(
         }
     }
 
+    fun logManualTimeMinutes(
+        date: LocalDate,
+        actionId: String,
+        title: String,
+        startMinuteOfDay: Int,
+        endMinuteExclusive: Int,
+        strategy: LogTimeStrategy
+    ) {
+        val sMin = startMinuteOfDay.coerceIn(0, 24 * 60)
+        val eMin = endMinuteExclusive.coerceIn(0, 24 * 60)
+        if (eMin <= sMin) return
+
+        viewModelScope.launch {
+            runCatching {
+                val (fromI, toI) = minuteWindow(date, sMin, eMin)
+                val now = timeProvider.nowInstant()
+
+                val queryFrom = fromI.minusSeconds(24 * 3600L)
+                val queryTo = toI.plusSeconds(1)
+                val existing = sessionRepository.getSessionsInRange(queryFrom, queryTo)
+
+                val overlaps = existing.filter { s ->
+                    val sEnd = s.endAt ?: now
+                    overlaps(s.startAt, sEnd, fromI, toI)
+                }
+
+                when (strategy) {
+                    LogTimeStrategy.OVERWRITE -> {
+                        overlaps.forEach { sessionRepository.delete(it.id) }
+                        upsertManualSession(actionId, fromI, toI, title)
+                    }
+
+                    LogTimeStrategy.FIT_AROUND -> {
+                        val gaps = computeGaps(fromI, toI, overlaps.map {
+                            val sEnd = it.endAt ?: now
+                            it.startAt to sEnd
+                        })
+                        gaps.forEach { (a, b) ->
+                            if (b.isAfter(a)) upsertManualSession(actionId, a, b, title)
+                        }
+                    }
+                }
+            }
+                .onSuccess { _events.tryEmit(PathEvent.ShowSnackbar("Time logged")) }
+                .onFailure { _events.tryEmit(PathEvent.ShowSnackbar(it.message ?: "Failed to log time")) }
+        }
+    }
+
+    /**
+     * Same idea as dateWindow(date, start, end), but expressed in minute-of-day.
+     *
+     * Key detail: endMinuteExclusive can be 1440, which means "end of day".
+     * LocalTime cannot represent 24:00, so we map that case to date+1 at 00:00.
+     */
+    private fun minuteWindow(date: LocalDate, startMinuteOfDay: Int, endMinuteExclusive: Int): Pair<Instant, Instant> {
+        val s = startMinuteOfDay.coerceIn(0, 24 * 60)
+        val e = endMinuteExclusive.coerceIn(0, 24 * 60)
+
+        val startAt = date.atStartOfDay(zone).plusMinutes(s.toLong()).toInstant()
+
+        val endAt = if (e == 24 * 60) {
+            date.plusDays(1).atStartOfDay(zone).toInstant()
+        } else {
+            date.atStartOfDay(zone).plusMinutes(e.toLong()).toInstant()
+        }
+
+        val from = minOf(startAt, endAt)
+        val to = maxOf(startAt, endAt)
+        return from to to
+    }
+
+
     private suspend fun upsertManualSession(actionId: String, startAt: Instant, endAt: Instant, note: String?) {
         val now = timeProvider.nowInstant()
         val dur = (endAt.toEpochMilli() - startAt.toEpochMilli()).coerceAtLeast(0L)

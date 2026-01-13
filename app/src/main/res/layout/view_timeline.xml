@@ -67,7 +67,7 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnBackToToday"
             android:layout_width="wrap_content"
-            android:layout_height="32dp"
+            android:layout_height="40dp"
             android:layout_marginEnd="10dp"
             android:backgroundTint="@color/mahout_surface"
             android:text="Now"
@@ -75,11 +75,11 @@
             android:textColor="@color/mahout_text_primary"
             android:visibility="gone"
             app:cornerRadius="16dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/btnTimelineStats"
-            app:layout_constraintTop_toTopOf="parent"
             app:strokeColor="@color/mahout_outline_soft"
-            app:strokeWidth="1dp" />
+            app:strokeWidth="1dp"
+            app:layout_constraintEnd_toStartOf="@id/btnTimelineStats"
+        app:layout_constraintTop_toTopOf="@id/btnLogTime"
+        app:layout_constraintBottom_toBottomOf="@id/btnLogTime" />
 
 
         <!-- NEW: right-edge barrier for the date pill
@@ -131,7 +131,7 @@
                 android:layout_height="wrap_content"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
-                android:paddingBottom="6dp" />
+                android:paddingBottom="3dp" />
         </androidx.core.widget.NestedScrollView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>

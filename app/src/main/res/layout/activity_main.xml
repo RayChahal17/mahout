@@ -78,27 +78,27 @@
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardElephantFab"
         android:layout_width="@dimen/mahout_bottom_nav_center_size"
-        android:layout_height="@dimen/mahout_bottom_nav_center_size"
-        android:clickable="true"
-        android:focusable="true"
-        android:foreground="?attr/selectableItemBackgroundBorderless"
-        android:translationY="@dimen/mahout_bottom_nav_center_translation_y"
-        app:cardBackgroundColor="@color/mahout_accent"
-        app:cardElevation="@dimen/mahout_bottom_nav_center_elevation"
-        app:shapeAppearance="@style/ShapeAppearance.Mahout.Pill"
-        app:layout_constraintBottom_toTopOf="@id/bottomNavDock"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+    android:layout_height="@dimen/mahout_bottom_nav_center_size"
+    android:clickable="true"
+    android:focusable="true"
+    android:translationY="@dimen/mahout_bottom_nav_center_translation_y"
+    app:cardBackgroundColor="@color/mahout_accent"
+    app:cardElevation="@dimen/mahout_bottom_nav_center_elevation"
+        app:shapeAppearance="@style/ShapeAppearance.Mahout.Dock"
+    app:layout_constraintBottom_toTopOf="@id/bottomNavDock"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageView
-            android:id="@+id/ivElephantFab"
-            android:layout_width="@dimen/mahout_bottom_nav_center_icon_size"
-            android:layout_height="@dimen/mahout_bottom_nav_center_icon_size"
-            android:layout_gravity="center"
-            android:contentDescription="@string/tab_elephant"
-            android:src="@drawable/ic_nav_elephant"
-            app:tint="@color/mahout_on_accent" />
+    <ImageView
+        android:id="@+id/ivElephantFab"
+        android:layout_width="@dimen/mahout_bottom_nav_center_icon_size"
+    android:layout_height="@dimen/mahout_bottom_nav_center_icon_size"
+    android:layout_gravity="center"
+    android:scaleType="centerInside"
+    android:contentDescription="@string/tab_elephant"
+    android:src="@drawable/ic_nav_elephant"
+    app:tint="@color/mahout_on_accent" />
+</com.google.android.material.card.MaterialCardView>
 
-    </com.google.android.material.card.MaterialCardView>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>

@@ -94,4 +94,8 @@
     <color name="mahout_premium_progress_track">@color/mahout_stroke</color>
     <color name="mahout_premium_on_header">#FFFFFFFF</color>
     <color name="mahout_premium_on_header_outline">#33FFFFFF</color>
+
+    <!-- Notepad rule line (lighter than outline_soft so it never reads like strike-through) -->
+    <color name="mahout_paper_line_soft">#0F000000</color>
+
 </resources>

@@ -28,30 +28,38 @@
     <!-- Horizontal padding -->
     <dimen name="mahout_btn_padding_h">18dp</dimen>
 
-    <dimen name="timeline_viewport_height">300dp</dimen>
+    <dimen name="timeline_viewport_height">220dp</dimen>
 
     <!-- Bottom navigation (minimal) -->
-    <dimen name="bottom_nav_icon_size">22dp</dimen>
+    <dimen name="bottom_nav_icon_size">18dp</dimen>
 
     <!-- Bottom navigation dock (Phase 2 premium pill) -->
     <dimen name="mahout_bottom_nav_margin_h">0dp</dimen>
-    <dimen name="mahout_bottom_nav_margin_bottom">0dp</dimen>
+    <dimen name="mahout_bottom_nav_margin_bottom">-4dp</dimen>
 
     <dimen name="mahout_bottom_nav_padding_h">8dp</dimen>
-    <dimen name="mahout_bottom_nav_padding_v">6dp</dimen>
+    <dimen name="mahout_bottom_nav_padding_v">0dp</dimen>
 
     <dimen name="mahout_bottom_nav_elevation">14dp</dimen>
 
     <!-- Center Elephant button -->
-    <dimen name="mahout_bottom_nav_center_size">64dp</dimen>
-    <dimen name="mahout_bottom_nav_center_icon_size">70dp</dimen>
-    <dimen name="mahout_bottom_nav_center_elevation">18dp</dimen>
+    <dimen name="mahout_bottom_nav_center_size">72dp</dimen>
+    <dimen name="mahout_bottom_nav_center_icon_size">68dp</dimen>
+    <dimen name="mahout_bottom_nav_center_elevation">16dp</dimen>
 
     <!-- Negative means "lift upward" to overlap the pill dock -->
     <!-- TWEAK KNOB: Moves the center Elephant DOWN (positive) to overlap the dock more.
          Increase = Elephant goes LOWER into the dock.
          Decrease = Elephant rises higher above the dock. -->
-    <dimen name="mahout_bottom_nav_center_translation_y">34dp</dimen>
+    <dimen name="mahout_bottom_nav_center_translation_y">32dp</dimen>
 
+    <!-- TWEAK KNOB: Bottom nav dock corner radius.
+     Smaller = more “straight rectangle”.
+     Larger = more “pill”. -->
+    <dimen name="mahout_radius_dock">72dp</dimen>
+
+
+    <!-- Avatar size (Mahout tab) -->
+    <dimen name="mahout_avatar_size">148dp</dimen>
 
 </resources>

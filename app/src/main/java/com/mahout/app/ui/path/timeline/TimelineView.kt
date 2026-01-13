@@ -26,6 +26,9 @@ class TimelineView @JvmOverloads constructor(
         fun onBackToToday()
         fun onLogTime(date: LocalDate)
         fun onStats(date: LocalDate)
+
+        // New: painting cells on the timeline
+        fun onPaintTimeRange(date: LocalDate, startMinuteOfDay: Int, endMinuteExclusive: Int)
     }
 
     private val binding: ViewTimelineBinding =
@@ -72,6 +75,12 @@ class TimelineView @JvmOverloads constructor(
                 updateNowButtonVisibility()
             }
         )
+        binding.dayTimelineView.setOnTimeRangeSelectedListener(object : DayTimelineView.OnTimeRangeSelectedListener {
+            override fun onTimeRangeSelected(date: LocalDate, startMinuteOfDay: Int, endMinuteExclusive: Int) {
+                listener?.onPaintTimeRange(date, startMinuteOfDay, endMinuteExclusive)
+            }
+        })
+
     }
 
     fun setListener(listener: Listener?) {
@@ -87,6 +96,9 @@ class TimelineView @JvmOverloads constructor(
 
         if (dateChanged || (followChanged && followToday)) {
             pendingSnapToNow = true
+        }
+        if (dateChanged) {
+            binding.dayTimelineView.clearSelection()
         }
 
         lastSubmitDate = date
@@ -139,6 +151,9 @@ class TimelineView @JvmOverloads constructor(
         val targetY = (rawY - binding.timelineScroll.height / 3).coerceAtLeast(0)
         if (animated) binding.timelineScroll.smoothScrollTo(0, targetY)
         else binding.timelineScroll.scrollTo(0, targetY)
+    }
+    fun clearSelection() {
+        binding.dayTimelineView.clearSelection()
     }
 
     private fun updateNowButtonVisibility() {

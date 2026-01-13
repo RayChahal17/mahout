@@ -123,8 +123,11 @@ class ActionListAdapter(
 
             // --- Premium card treatment ---
             // subtle background tint (keeps it premium, not neon)
-            val tintedBg = ColorUtils.blendARGB(surfaceVar, accent, 0.06f)
-            card?.setCardBackgroundColor(tintedBg)
+            // --- Premium card treatment ---
+// Keep the card fill neutral (paper-premium). We encode the action color via
+// stroke/text/progress instead of tinting the whole surface.
+            card?.setCardBackgroundColor(surface)
+
 
             // thin accent stroke instead of thick neon border
             card?.strokeWidth = dp(1.4f)

@@ -49,4 +49,11 @@
         <item name="cornerSizeBottomRight">999dp</item>
     </style>
 
+    <!-- Rounded rectangle for the bottom nav dock (NOT a pill) -->
+    <style name="ShapeAppearance.Mahout.Dock" parent="ShapeAppearance.Material3.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/mahout_radius_dock</item>
+    </style>
+
+
 </resources>

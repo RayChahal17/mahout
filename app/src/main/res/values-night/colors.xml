@@ -66,5 +66,8 @@
     <color name="premium_card_stroke">@color/mahout_outline_soft</color>
     <color name="premium_text_primary">@color/mahout_text_primary</color>
     <color name="premium_text_secondary">@color/mahout_text_secondary</color>
+    <!-- Notepad rule line (subtle in dark mode too) -->
+    <color name="mahout_paper_line_soft">#14FFFFFF</color>
+
 </resources>
 

@@ -1,87 +1,98 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+      PREMIUM NOTEPAD SHEET
+      Key fixes:
+      1) Softer line color (mahout_paper_line_soft)
+      2) Reduced side insets (12dp vs 16dp)
+      3) Line baseline shifted down to account for content padding so text doesn't get "struck through"
+
+      IMPORTANT: In fragment_mahout.xml below, we set padding to 12dp.
+      Our first rule line is at 36dp (= 12dp padding + ~24dp line height).
+      That places the rule under the text baseline instead of through the glyphs.
+    -->
+
     <!-- Base sheet -->
     <item>
         <shape android:shape="rectangle">
             <solid android:color="@color/mahout_surface_0" />
+
+            <!-- Locked: premium outlines use semantic outline token (no hex in drawable) -->
             <stroke
-                android:width="1dp"
-                android:color="@color/mahout_stroke_light" />
-            <corners android:radius="22dp" />
+                android:width="@dimen/mahout_stroke_1"
+                android:color="@color/mahout_outline_soft" />
+
+            <!-- Nested surface should be slightly tighter than card radius -->
+            <corners android:radius="@dimen/mahout_radius_input" />
         </shape>
     </item>
 
-    <!-- Horizontal lines (preview feel). We inset left/right so it looks premium. -->
-    <!-- Line 1 -->
+    <!-- Rule lines (hairlines) -->
+    <!-- First line: 36dp = 12dp padding + ~24dp line height -->
     <item
         android:gravity="top"
-        android:left="16dp"
-        android:right="16dp"
-        android:top="44dp">
+        android:left="12dp"
+        android:right="12dp"
+        android:top="36dp">
         <shape>
-            <size android:height="1dp" />
-            <solid android:color="@color/mahout_paper_line" />
+            <size android:height="@dimen/mahout_stroke_1" />
+            <solid android:color="@color/mahout_paper_line_soft" />
         </shape>
     </item>
 
-    <!-- Line 2 -->
     <item
         android:gravity="top"
-        android:left="16dp"
-        android:right="16dp"
-        android:top="64dp">
+        android:left="12dp"
+        android:right="12dp"
+        android:top="60dp">
         <shape>
-            <size android:height="1dp" />
-            <solid android:color="@color/mahout_paper_line" />
+            <size android:height="@dimen/mahout_stroke_1" />
+            <solid android:color="@color/mahout_paper_line_soft" />
         </shape>
     </item>
 
-    <!-- Line 3 -->
     <item
         android:gravity="top"
-        android:left="16dp"
-        android:right="16dp"
+        android:left="12dp"
+        android:right="12dp"
         android:top="84dp">
         <shape>
-            <size android:height="1dp" />
-            <solid android:color="@color/mahout_paper_line" />
+            <size android:height="@dimen/mahout_stroke_1" />
+            <solid android:color="@color/mahout_paper_line_soft" />
         </shape>
     </item>
 
-    <!-- Line 4 -->
     <item
         android:gravity="top"
-        android:left="16dp"
-        android:right="16dp"
-        android:top="104dp">
+        android:left="12dp"
+        android:right="12dp"
+        android:top="108dp">
         <shape>
-            <size android:height="1dp" />
-            <solid android:color="@color/mahout_paper_line" />
+            <size android:height="@dimen/mahout_stroke_1" />
+            <solid android:color="@color/mahout_paper_line_soft" />
         </shape>
     </item>
 
-    <!-- Line 5 -->
     <item
         android:gravity="top"
-        android:left="16dp"
-        android:right="16dp"
-        android:top="124dp">
+        android:left="12dp"
+        android:right="12dp"
+        android:top="132dp">
         <shape>
-            <size android:height="1dp" />
-            <solid android:color="@color/mahout_paper_line" />
+            <size android:height="@dimen/mahout_stroke_1" />
+            <solid android:color="@color/mahout_paper_line_soft" />
         </shape>
     </item>
 
-    <!-- Line 6 -->
     <item
         android:gravity="top"
-        android:left="16dp"
-        android:right="16dp"
-        android:top="144dp">
+        android:left="12dp"
+        android:right="12dp"
+        android:top="156dp">
         <shape>
-            <size android:height="1dp" />
-            <solid android:color="@color/mahout_paper_line" />
+            <size android:height="@dimen/mahout_stroke_1" />
+            <solid android:color="@color/mahout_paper_line_soft" />
         </shape>
     </item>
 
